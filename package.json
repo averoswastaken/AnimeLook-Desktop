@@ -9,7 +9,7 @@
     "publish": "electron-builder --win --publish always"
   },
   "author": "AnimeLook",
-  "license": "MIT",
+  "license": "SELF",
   "devDependencies": {
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
