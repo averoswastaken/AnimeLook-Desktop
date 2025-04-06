@@ -22,6 +22,9 @@ let mainWindow = null;
 autoUpdater.logger = require('electron-log');
 autoUpdater.logger.transports.file.level = 'info';
 
+// Force updates in development mode
+autoUpdater.forceDevUpdateConfig = true;
+
 // Initialize updater
 // Add these variables at the top
 let splashWindow = null;
