@@ -485,7 +485,7 @@ function resetVideoPlayerControls() {
 }
 
 
-
+// Add these variables at the top with other declarations
 const updateButton = document.getElementById('update-button');
 const updateNotification = document.getElementById('update-notification');
 const closeUpdateModal = document.getElementById('close-update-modal');
@@ -501,7 +501,7 @@ const installUpdateButton = document.getElementById('install-update-button');
 
 let hasUpdate = false;
 
-
+// Add these functions to handle updates
 function toggleUpdateNotification(show) {
   if (show) {
     updateNotification.classList.add('visible');
@@ -517,7 +517,7 @@ function handleUpdateStatus(status) {
     updateMessage.textContent = status.message;
   }
   
-
+  // Handle download progress
   if (status.data && status.data.percent !== undefined) {
     updateProgress.style.display = 'block';
     const percent = Math.round(status.data.percent);
@@ -525,7 +525,7 @@ function handleUpdateStatus(status) {
     progressText.textContent = `${percent}%`;
   }
   
-
+  // Show install button when download is complete
   if (status.message === 'Güncelleme indirildi') {
     downloadUpdateButton.style.display = 'none';
     installUpdateButton.style.display = 'inline-block';
@@ -536,7 +536,7 @@ function handleUpdateAvailable(info) {
   hasUpdate = true;
   updateButton.style.display = 'flex';
   
-
+  // Update notification content
   updateVersion.textContent = `Sürüm: ${info.version}`;
   if (info.releaseNotes) {
     updateNotes.innerHTML = `<strong>Değişiklikler:</strong><br>${formatReleaseNotes(info.releaseNotes)}`;
@@ -544,14 +544,14 @@ function handleUpdateAvailable(info) {
     updateNotes.textContent = '';
   }
   
-
+  // Show download button
   downloadUpdateButton.style.display = 'inline-block';
 }
 
 function formatReleaseNotes(notes) {
   if (!notes) return '';
   
-
+  // Convert markdown to simple HTML
   return notes
     .replace(/\r\n/g, '\n')
     .replace(/\n\n/g, '<br><br>')
@@ -563,7 +563,7 @@ function formatReleaseNotes(notes) {
     .replace(/# (.*?)\n/g, '<h1>$1</h1>');
 }
 
-
+// Add these event listeners
 updateButton.addEventListener('click', () => {
   toggleUpdateNotification(true);
 });
@@ -588,13 +588,120 @@ installUpdateButton.addEventListener('click', () => {
   window.electronAPI.installUpdate();
 });
 
-
+// Add these event listeners for update-related events
 window.electronAPI.onUpdateStatus(handleUpdateStatus);
 window.electronAPI.onUpdateAvailable(handleUpdateAvailable);
 
-
+// Add this to the existing modal click handler
 updateNotification.addEventListener('click', (event) => {
   if (event.target === updateNotification) {
     toggleUpdateNotification(false);
   }
+});
+
+
+// Add this function to intercept social media share buttons on the website
+
+function setupSocialShareInterception() {
+  const webview = document.getElementById('webview');
+  
+  if (!webview) return;
+  
+  webview.addEventListener('dom-ready', () => {
+    webview.executeJavaScript(`
+      (function() {
+        // Function to handle clicks on share buttons
+        function handleShareButtonClick(e) {
+          const link = e.currentTarget;
+          const href = link.href || '';
+          
+          // Check if this is a social share link
+          if (href.includes('facebook.com/sharer') || 
+              href.includes('twitter.com/intent/tweet') || 
+              href.includes('twitter.com/share') || 
+              href.includes('whatsapp.com/send')) {
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let platform = '';
+            if (href.includes('facebook')) platform = 'facebook';
+            else if (href.includes('twitter')) platform = 'twitter';
+            else if (href.includes('whatsapp')) platform = 'whatsapp';
+            
+            // Send message to open in external browser
+            window.electronAPI.shareUrl(platform, window.location.href, document.title);
+            
+            return false;
+          }
+        }
+        
+        // Find and attach event listeners to social share buttons
+        function attachToShareButtons() {
+          // Common selectors for share buttons
+          const selectors = [
+            'a[href*="facebook.com/sharer"]',
+            'a[href*="twitter.com/intent/tweet"]',
+            'a[href*="twitter.com/share"]',
+            'a[href*="whatsapp.com/send"]',
+            '.facebook, .fb-share, .facebook-share',
+            '.twitter, .twitter-share',
+            '.whatsapp, .whatsapp-share',
+            '#facebook, #twitter, #whatsapp',
+            '[class*="facebook-share"], [class*="twitter-share"], [class*="whatsapp-share"]'
+          ];
+          
+          // Get all share buttons
+          selectors.forEach(selector => {
+            const buttons = document.querySelectorAll(selector);
+            buttons.forEach(button => {
+              // Only add listener if not already added
+              if (!button.dataset.shareIntercepted) {
+                button.dataset.shareIntercepted = 'true';
+                button.addEventListener('click', handleShareButtonClick);
+              }
+            });
+          });
+        }
+        
+        // Run immediately
+        attachToShareButtons();
+        
+        // Set up observer for dynamically added buttons
+        const observer = new MutationObserver(() => {
+          attachToShareButtons();
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+        
+        // Also intercept the specific buttons shown in your screenshot
+        setTimeout(() => {
+          const paylas = document.querySelector('.paylas');
+          if (paylas) {
+            const links = paylas.querySelectorAll('a');
+            links.forEach(link => {
+              if (!link.dataset.shareIntercepted) {
+                link.dataset.shareIntercepted = 'true';
+                link.addEventListener('click', handleShareButtonClick);
+              }
+            });
+          }
+        }, 2000);
+      })();
+    `).catch(err => {
+      console.error('Error setting up share interception:', err);
+    });
+  });
+}
+
+// Call this function after the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  updateNavigationButtons();
+  setupSharingButtons();
+  setupWebsiteShareButtonInterception(); // Add this line
+  
+  // ... existing code ...
 });

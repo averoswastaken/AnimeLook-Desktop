@@ -4,6 +4,20 @@ const fs = require('fs');
 const Store = require('electron-store');
 const updater = require('./updater');
 
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
 
 const store = new Store({
   name: 'settings',
@@ -22,7 +36,7 @@ let isQuitting = false;
 let currentUrl = "https://animelook.com/";
 let splashWindow = null;
 
-
+// Set auto launch settings
 const setAutoLaunch = (enabled) => {
   app.setLoginItemSettings({
     openAtLogin: enabled,
@@ -30,7 +44,7 @@ const setAutoLaunch = (enabled) => {
   });
 };
 
-
+// Apply performance settings based on mode
 function applyPerformanceSettings(mode) {
   if (!mainWindow) return;
   
@@ -52,7 +66,7 @@ function applyPerformanceSettings(mode) {
   }
 }
 
-
+// Create the splash window
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 400,
@@ -80,7 +94,7 @@ function createSplashWindow() {
   });
 }
 
-
+// Create the main application window
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -95,17 +109,56 @@ function createWindow() {
     },
     frame: false, 
     backgroundColor: '#2e2c29',
-    show: false 
+    show: false // Don't show immediately - this is correct
   });
 
   mainWindow.loadFile('index.html');
   
-
+  // Set up event listeners for the main window
+  // Modify the window open handler to allow popups within the app
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
+  // Check if this is a social sharing URL
+  if (url.includes('facebook.com/sharer') || 
+  url.includes('twitter.com/intent/tweet') || 
+  url.includes('twitter.com/share') || 
+  url.includes('whatsapp.com/send')) {
+  // Open social sharing links in external browser
+  shell.openExternal(url);
+  return { action: 'deny' };
+  }
+  
+  // Allow popups from the same origin or trusted domains
+  const urlObj = new URL(url);
+  const currentUrlObj = new URL(currentUrl);
+  
+  if (urlObj.hostname === currentUrlObj.hostname || 
+  urlObj.hostname.includes('animelook.com')) {
+  // Allow the popup to open within the app
+  return { 
+  action: 'allow',
+  overrideBrowserWindowOptions: {
+  width: 800,
+  height: 600,
+  frame: true,
+  webPreferences: {
+  nodeIntegration: false,
+  contextIsolation: true,
+  webviewTag: false,
+  partition: 'persist:animelook'
+  }
+  }
+  };
+  }
+  
+  // For all other URLs, open in external browser
+  shell.openExternal(url);
+  return { action: 'deny' };
   });
 
+  // We'll only maximize when we're ready to show the window
+  // Remove or comment out this line:
+  // mainWindow.maximize();
+  
   mainWindow.webContents.on('did-start-loading', () => {
     mainWindow.webContents.send('loading', true);
   });
@@ -166,7 +219,7 @@ function createWindow() {
   });
 }
 
-
+// Create the PiP window
 function createPipWindow(url, videoElement) {
   const { width: screenWidth, height: screenHeight } = require('electron').screen.getPrimaryDisplay().workAreaSize;
   
@@ -416,7 +469,7 @@ function createPipWindow(url, videoElement) {
   });
 }
 
-
+// Close the PiP window
 function closePipWindow() {
   if (pipWindow) {
     pipWindow.close();
@@ -430,7 +483,7 @@ function closePipWindow() {
   }
 }
 
-
+// Create the system tray
 function createTray() {
   tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
   const contextMenu = Menu.buildFromTemplate([
@@ -467,7 +520,7 @@ function createTray() {
   });
 }
 
-
+// Set up IPC communication
 function setupIPC() {
   ipcMain.on('toggle-mini-mode', (event, isActive) => {
     if (!mainWindow) return;
@@ -548,6 +601,7 @@ function setupIPC() {
         mainWindow.hide();
         break;
       case 'show':
+        if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.show();
         mainWindow.focus();
         break;
@@ -566,7 +620,23 @@ function setupIPC() {
         break;
     }
   });
-
+  
+  // Remove the nested setupIPC function and keep only one set of handlers
+  
+  ipcMain.on('show-main-window', () => {
+    if (splashWindow) {
+      splashWindow.close();
+      splashWindow = null;
+    }
+    
+    if (mainWindow) {
+      // First maximize, then show
+      mainWindow.maximize();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+  
   ipcMain.on('save-settings', (event, settings) => {
     store.set('startAtBoot', settings.startAtBoot);
     store.set('runInBackground', settings.runInBackground);
@@ -586,11 +656,9 @@ function setupIPC() {
     };
   });
   
-
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
   });
-
 
   ipcMain.on('check-for-updates', () => {
     updater.checkForUpdates();
@@ -603,38 +671,26 @@ function setupIPC() {
   ipcMain.on('install-update', () => {
     updater.installUpdate();
   });
-  
-  ipcMain.on('show-main-window', () => {
-    if (splashWindow) {
-      splashWindow.close();
-      splashWindow = null;
-    }
-    
-    if (mainWindow) {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  });
-}
+} // End of setupIPC function
 
-
+// App initialization
 app.whenReady().then(() => {
-
+  // Set up IPC handlers first
   setupIPC();
   
-
+  // Create splash window first
   createSplashWindow();
   
-
+  // Create main window but don't show it yet
   createWindow();
   
-
+  // Create system tray
   createTray();
   
-
+  // Initialize updater with both windows
   updater.initUpdater(mainWindow, splashWindow);
   
-
+  // Apply settings
   setAutoLaunch(store.get('startAtBoot'));
   applyPerformanceSettings(store.get('performanceMode'));
 });
@@ -655,4 +711,26 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
   isQuitting = true;
-});
+})
+
+
+  // Add this to your setupIPC function
+  ipcMain.on('share-url', (event, platform, url, title) => {
+    let shareUrl;
+    
+    switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(title + ' ' + url)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
+        break;
+      default:
+        return;
+    }
+    
+    shell.openExternal(shareUrl);
+  });

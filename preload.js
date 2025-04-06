@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 
-
+// Add these to the electronAPI object
 contextBridge.exposeInMainWorld('electronAPI', {
 
   windowControl: (action) => ipcRenderer.send('window-control', action),
@@ -31,14 +31,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closePipWindow: () => ipcRenderer.send('close-pip-window'),
   onPipError: (callback) => ipcRenderer.on('pip-error', (_, errorMessage) => callback(errorMessage)),
   
-
+  // Update related functions
   checkForUpdates: () => ipcRenderer.send('check-for-updates'),
   downloadUpdate: () => ipcRenderer.send('download-update'),
   installUpdate: () => ipcRenderer.send('install-update'),
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (_, status) => callback(status)),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_, info) => callback(info)),
   
+  // Get app version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  
+  // Add this new method for social sharing
+  shareUrl: (platform, url, title) => ipcRenderer.send('share-url', platform, url, title),
+  openExternal: (url) => ipcRenderer.send('open-external-url', url),
+  
+  // Add this method to handle popup windows
+  handlePopupClick: (url) => {
+    // This will be handled by the window open handler in main.js
+    window.open(url, '_blank');
+  },
 });
 
 
@@ -111,4 +122,22 @@ window.addEventListener('DOMContentLoaded', () => {
       ipcRenderer.send('open-external-url', event.data.url);
     }
   });
+  
+  // Add this code to handle webview new-window events
+  const webview = document.getElementById('webview');
+  if (webview) {
+    webview.addEventListener('new-window', (e) => {
+      const protocol = new URL(e.url).protocol;
+      if (protocol === 'http:' || protocol === 'https:') {
+        // If it's your domain, load it in the webview
+        const domain = new URL(e.url).hostname;
+        if (domain.includes('animelook.com')) {
+          webview.src = e.url;
+        } else {
+          // For external links, open in default browser
+          window.electronAPI.openExternal(e.url);
+        }
+      }
+    });
+  }
 });

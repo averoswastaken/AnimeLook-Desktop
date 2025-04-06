@@ -73,7 +73,8 @@
 
 
   <div id="content">
-    <webview id="webview" src="https://animelook.com/"></webview>
+    <!-- Find the webview element and update it to include the partition attribute -->
+    <webview id="webview" src="https://animelook.com" partition="persist:animelook"></webview>
   </div>
 
 
@@ -88,7 +89,8 @@
       </button>
     </div>
     <div id="mini-video-content">
-      <webview id="mini-webview"></webview>
+      <!-- Update the mini webview to include the partition attribute -->
+      <webview id="mini-webview" partition="persist:animelook"></webview>
     </div>
   </div>
 
