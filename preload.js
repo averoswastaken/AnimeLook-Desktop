@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 
-// Add these to the electronAPI object
+
 contextBridge.exposeInMainWorld('electronAPI', {
 
   windowControl: (action) => ipcRenderer.send('window-control', action),
@@ -31,14 +31,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closePipWindow: () => ipcRenderer.send('close-pip-window'),
   onPipError: (callback) => ipcRenderer.on('pip-error', (_, errorMessage) => callback(errorMessage)),
   
-  // Update related functions
+
   checkForUpdates: () => ipcRenderer.send('check-for-updates'),
   downloadUpdate: () => ipcRenderer.send('download-update'),
   installUpdate: () => ipcRenderer.send('install-update'),
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (_, status) => callback(status)),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_, info) => callback(info)),
   
-  // Get app version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 });
 
