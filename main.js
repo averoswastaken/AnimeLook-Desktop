@@ -19,7 +19,7 @@ let mainWindow = null;
 let pipWindow = null;
 let tray = null;
 let isQuitting = false;
-let currentUrl = "https://animelook.com/";
+let currentUrl = "https://animelook.net/";
 let splashWindow = null;
 
 // Set auto launch settings
@@ -91,7 +91,10 @@ function createWindow() {
       contextIsolation: true,
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
-      partition: 'persist:animelook' 
+      partition: 'persist:animelook',
+      // Çerezleri ve oturum bilgilerini kaydetmek için
+      cache: true,
+      persistentCookies: true
     },
     frame: false, 
     backgroundColor: '#2e2c29',
@@ -102,8 +105,20 @@ function createWindow() {
   
   // Set up event listeners for the main window
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Eğer animelook.net domain'ine aitse aynı pencerede aç
+    if (url.includes('animelook.net')) {
+      return { action: 'allow' };
+    }
+    // Diğer linkleri dış tarayıcıda aç
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // Start in maximized mode (pencereli tam ekran)
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize();
+    // Gerçek tam ekran modunu kaldırdık, sadece maximize edilmiş pencere kullanıyoruz
+    // mainWindow.setFullScreen(true);
   });
 
   mainWindow.webContents.on('did-start-loading', () => {
@@ -185,7 +200,7 @@ function createPipWindow(url, videoElement) {
       contextIsolation: true,
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
-      partition: 'persist:animelook'
+      partition: 'persist:animelook' // Ensure same partition is used
     },
     backgroundColor: '#1a1a1a',
     minWidth: 320,
@@ -463,6 +478,7 @@ function createTray() {
       mainWindow.hide();
     } else {
       mainWindow.show();
+      mainWindow.focus();
     }
   });
 }
@@ -610,34 +626,57 @@ function setupIPC() {
       splashWindow = null;
     }
     
-    if (mainWindow) {
+    // Ana pencere henüz oluşturulmadıysa oluştur
+    if (!mainWindow) {
+      createWindow();
+      // Ana pencere oluşturulduktan sonra updater'ı güncelle
+      updater.initUpdater(mainWindow, null);
+    } else {
       mainWindow.show();
       mainWindow.focus();
     }
   });
 }
 
-// App initialization
-app.whenReady().then(() => {
-  // Set up IPC handlers first
-  setupIPC();
-  
-  // Create splash window first
-  createSplashWindow();
-  
-  // Create main window but don't show it yet
-  createWindow();
-  
-  // Create system tray
-  createTray();
-  
-  // Initialize updater with both windows
-  updater.initUpdater(mainWindow, splashWindow);
-  
-  // Apply settings
-  setAutoLaunch(store.get('startAtBoot'));
-  applyPerformanceSettings(store.get('performanceMode'));
-});
+// Tek instance çalışmasını sağla
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  // Eğer başka bir instance zaten çalışıyorsa, bu instance'ı kapat
+  app.quit();
+} else {
+  // İkinci bir instance başlatılmaya çalışıldığında
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Eğer ana pencere varsa, minimize edilmişse restore et ve focus ver
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+
+  // App initialization
+  app.whenReady().then(() => {
+    // Set up IPC handlers first
+    setupIPC();
+    
+    // Create splash window first
+    createSplashWindow();
+    
+    // Create system tray
+    createTray();
+    
+    // Initialize updater with splash window only initially
+    updater.initUpdater(null, splashWindow);
+    
+    // Apply settings
+    setAutoLaunch(store.get('startAtBoot'));
+    applyPerformanceSettings(store.get('performanceMode'));
+    
+    // Main window will be created after splash screen checks are complete
+    // This is handled by the 'show-main-window' IPC event
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

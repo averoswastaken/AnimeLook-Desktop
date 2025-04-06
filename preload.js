@@ -71,14 +71,39 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const script = document.createElement('script');
   script.textContent = `
-
+    // Improve window.open handling
     const originalWindowOpen = window.open;
     
-
     window.open = function(url, target, features) {
-
       if (url) {
-        window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
+        // Check if it's an internal link (same domain)
+        const currentDomain = window.location.hostname;
+        const urlObj = new URL(url, window.location.href);
+        
+        if (urlObj.hostname === currentDomain || urlObj.hostname === 'animelook.com' || urlObj.hostname.endsWith('.animelook.com')) {
+          // Internal link - open in the same window
+          window.location.href = url;
+          return null;
+        } else {
+          // Ctrl tuşuna basılıysa veya target="_blank" ise dış tarayıcıda aç
+          if (window.event && window.event.ctrlKey) {
+            window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
+            return null;
+          }
+          
+          // Instagram, Twitter gibi sosyal medya linkleri için dış tarayıcıda aç
+          if (urlObj.hostname.includes('instagram.com') || 
+              urlObj.hostname.includes('twitter.com') || 
+              urlObj.hostname.includes('facebook.com') || 
+              urlObj.hostname.includes('youtube.com')) {
+            window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
+            return null;
+          }
+          
+          // Diğer linkleri aynı pencerede aç
+          window.location.href = url;
+          return null;
+        }
       }
 
       return {
@@ -88,6 +113,34 @@ window.addEventListener('DOMContentLoaded', () => {
         blur: function() {}
       };
     };
+    
+    // Tüm _blank hedefli linkleri yakalayıp düzgün açılmasını sağla
+    document.addEventListener('click', function(e) {
+      const link = e.target.closest('a');
+      if (link && link.target === '_blank') {
+        e.preventDefault();
+        window.open(link.href, '_blank');
+      }
+    }, true);
+    
+    // Handle link clicks directly
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link && link.href) {
+        const url = link.href;
+        const currentDomain = window.location.hostname;
+        const urlObj = new URL(url, window.location.href);
+        
+        // Check if it's an external link and not modified by keyboard
+        if ((urlObj.hostname !== currentDomain && 
+             urlObj.hostname !== 'animelook.com' && 
+             !urlObj.hostname.endsWith('.animelook.com')) && 
+            !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
+        }
+      }
+    }, true);
   `;
   document.head.appendChild(script);
   

@@ -150,6 +150,31 @@ webview.addEventListener('did-finish-load', () => {
 
       window.postMessage({ type: 'video-fullscreen-change', isFullscreen: !!document.webkitFullscreenElement }, '*');
     });
+    
+    // Yeni sekme açma davranışını düzenle
+    document.querySelectorAll('a[target="_blank"]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const url = link.getAttribute('href');
+        const urlObj = new URL(url, window.location.href);
+        
+        // Eğer animelook.com domain'ine aitse aynı pencerede aç
+        if (urlObj.hostname === 'animelook.com' || urlObj.hostname.endsWith('.animelook.com')) {
+          window.location.href = url;
+        } else {
+          // Ctrl tuşuna basılıysa veya sosyal medya linki ise dış tarayıcıda aç
+          if (e.ctrlKey || 
+              urlObj.hostname.includes('instagram.com') || 
+              urlObj.hostname.includes('twitter.com') || 
+              urlObj.hostname.includes('facebook.com') || 
+              urlObj.hostname.includes('youtube.com')) {
+            window.open(url, '_blank');
+          } else {
+            window.location.href = url;
+          }
+        }
+      });
+    });
   `);
   
 

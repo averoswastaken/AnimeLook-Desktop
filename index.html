@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src 'self' https://animelook.com data:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://animelook.com; frame-src 'self' https://animelook.com">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src 'self' https://animelook.net data:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://animelook.net; frame-src 'self' https://animelook.net">
   <title>AnimeLook</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -73,7 +73,7 @@
 
 
   <div id="content">
-    <webview id="webview" src="https://animelook.com/"></webview>
+    <webview id="webview" src="https://animelook.net/" partition="persist:animelook" webpreferences="allowRunningInsecureContent=no, javascript=yes, plugins=no, contextIsolation=yes" useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"></webview>
   </div>
 
 
