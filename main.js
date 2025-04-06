@@ -22,7 +22,7 @@ let isQuitting = false;
 let currentUrl = "https://animelook.com/";
 let splashWindow = null;
 
-// Set auto launch settings
+
 const setAutoLaunch = (enabled) => {
   app.setLoginItemSettings({
     openAtLogin: enabled,
@@ -30,7 +30,7 @@ const setAutoLaunch = (enabled) => {
   });
 };
 
-// Apply performance settings based on mode
+
 function applyPerformanceSettings(mode) {
   if (!mainWindow) return;
   
@@ -52,7 +52,7 @@ function applyPerformanceSettings(mode) {
   }
 }
 
-// Create the splash window
+
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 400,
@@ -80,7 +80,7 @@ function createSplashWindow() {
   });
 }
 
-// Create the main application window
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -95,12 +95,12 @@ function createWindow() {
     },
     frame: false, 
     backgroundColor: '#2e2c29',
-    show: false // Don't show immediately
+    show: false 
   });
 
   mainWindow.loadFile('index.html');
   
-  // Set up event listeners for the main window
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
@@ -166,7 +166,7 @@ function createWindow() {
   });
 }
 
-// Create the PiP window
+
 function createPipWindow(url, videoElement) {
   const { width: screenWidth, height: screenHeight } = require('electron').screen.getPrimaryDisplay().workAreaSize;
   
@@ -416,7 +416,7 @@ function createPipWindow(url, videoElement) {
   });
 }
 
-// Close the PiP window
+
 function closePipWindow() {
   if (pipWindow) {
     pipWindow.close();
@@ -430,7 +430,7 @@ function closePipWindow() {
   }
 }
 
-// Create the system tray
+
 function createTray() {
   tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
   const contextMenu = Menu.buildFromTemplate([
@@ -467,7 +467,7 @@ function createTray() {
   });
 }
 
-// Set up IPC communication
+
 function setupIPC() {
   ipcMain.on('toggle-mini-mode', (event, isActive) => {
     if (!mainWindow) return;
@@ -586,12 +586,12 @@ function setupIPC() {
     };
   });
   
-  // Add handler for app version
+
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
   });
 
-  // Add these new IPC handlers for updates
+
   ipcMain.on('check-for-updates', () => {
     updater.checkForUpdates();
   });
@@ -617,24 +617,24 @@ function setupIPC() {
   });
 }
 
-// App initialization
+
 app.whenReady().then(() => {
-  // Set up IPC handlers first
+
   setupIPC();
   
-  // Create splash window first
+
   createSplashWindow();
   
-  // Create main window but don't show it yet
+
   createWindow();
   
-  // Create system tray
+
   createTray();
   
-  // Initialize updater with both windows
+
   updater.initUpdater(mainWindow, splashWindow);
   
-  // Apply settings
+
   setAutoLaunch(store.get('startAtBoot'));
   applyPerformanceSettings(store.get('performanceMode'));
 });
