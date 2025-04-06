@@ -437,10 +437,6 @@ input[type="checkbox"], input[type="radio"] {
   border: none;
 }
 
-
-/* Add these styles at an appropriate location in your CSS file */
-
-/* Update button animation */
 @keyframes pulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
@@ -452,7 +448,6 @@ input[type="checkbox"], input[type="radio"] {
   animation: pulse 2s infinite;
 }
 
-/* Progress bar styles */
 .progress-bar-container {
   background-color: #333;
   border-radius: 4px;
@@ -475,7 +470,6 @@ input[type="checkbox"], input[type="radio"] {
   color: #ccc;
 }
 
-/* Update notification styles */
 #update-notes {
   margin-top: 10px;
   max-height: 200px;
