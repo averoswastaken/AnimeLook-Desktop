@@ -226,7 +226,7 @@ function createPipWindow(url, videoElement) {
       .pip-title {
         font-size: 12px;
         font-weight: 500;
-        color: #f47521;
+        color: #2196F3;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       }
       

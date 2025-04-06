@@ -222,6 +222,31 @@ async function downloadAndInstallManually(downloadUrl) {
   try {
     sendStatusToWindow('Güncelleme indiriliyor...');
     
+    // Check if URL is valid
+    if (!downloadUrl) {
+      throw new Error('Geçerli indirme URL\'si bulunamadı');
+    }
+    
+    // Log the URL we're trying to download from
+    console.log('Trying to download from:', downloadUrl);
+    
+    // Try to get the release directly from GitHub API as fallback
+    if (downloadUrl.includes('github.com') && downloadUrl.includes('404')) {
+      console.log('GitHub 404 error, trying alternative download method...');
+      try {
+        const releaseResponse = await axios.get(GITHUB_API_URL);
+        const assets = releaseResponse.data.assets || [];
+        const exeAsset = assets.find(a => a.name.endsWith('.exe'));
+        
+        if (exeAsset && exeAsset.browser_download_url) {
+          downloadUrl = exeAsset.browser_download_url;
+          console.log('Found alternative download URL:', downloadUrl);
+        }
+      } catch (err) {
+        console.error('Failed to get alternative download URL:', err);
+      }
+    }
+    
     const tempDir = path.join(app.getPath('temp'), 'animelook-updates');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
@@ -229,34 +254,63 @@ async function downloadAndInstallManually(downloadUrl) {
     
     const installerPath = path.join(tempDir, 'AnimeLook-Setup.exe');
     
-    // Download the file
-    const response = await axios({
-      method: 'GET',
-      url: downloadUrl,
-      responseType: 'stream'
-    });
-    
-    const writer = fs.createWriteStream(installerPath);
-    response.data.pipe(writer);
-    
-    writer.on('finish', () => {
-      sendStatusToWindow('Güncelleme indirildi, kurulum başlatılıyor...');
-      
-      // Run the installer
-      const installer = spawn(installerPath, ['--updated'], {
-        detached: true,
-        stdio: 'ignore'
+    // Download the file with better error handling
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: downloadUrl,
+        responseType: 'stream',
+        timeout: 30000, // 30 second timeout
+        validateStatus: status => status === 200
       });
       
-      installer.unref();
-      app.quit();
-    });
-    
-    writer.on('error', (err) => {
-      sendStatusToWindow('İndirme hatası', err);
-    });
+      const writer = fs.createWriteStream(installerPath);
+      response.data.pipe(writer);
+      
+      writer.on('finish', () => {
+        sendStatusToWindow('Güncelleme indirildi, kurulum başlatılıyor...');
+        
+        // Run the installer
+        const installer = spawn(installerPath, ['--updated'], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        
+        installer.unref();
+        
+        // Quit the app after a short delay
+        setTimeout(() => {
+          app.exit(0);
+        }, 1000);
+      });
+      
+      writer.on('error', (err) => {
+        sendStatusToWindow('İndirme hatası', err);
+        console.error('Download write error:', err);
+      });
+    } catch (downloadError) {
+      console.error('Download request failed:', downloadError);
+      sendStatusToWindow('İndirme başarısız', downloadError);
+      
+      // Notify user about manual download option
+      if (mainWindow) {
+        dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          title: 'Otomatik Güncelleme Başarısız',
+          message: 'Güncelleme indirilemedi.',
+          detail: 'Lütfen en son sürümü GitHub sayfasından manuel olarak indirin.',
+          buttons: ['GitHub\'a Git', 'İptal'],
+          defaultId: 0
+        }).then(({ response }) => {
+          if (response === 0) {
+            shell.openExternal(`https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
+          }
+        });
+      }
+    }
   } catch (error) {
-    sendStatusToWindow('Güncelleme indirme hatası', error);
+    console.error('Manuel indirme hatası:', error);
+    sendStatusToWindow('İndirme başarısız', error);
   }
 }
 

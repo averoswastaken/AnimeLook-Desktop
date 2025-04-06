@@ -50,7 +50,7 @@ body {
 .window-title {
   font-size: 14px;
   font-weight: 500;
-  color: #f47521;
+  color: #2196F3; 
   display: flex;
   align-items: center;
   position: absolute;
@@ -90,7 +90,7 @@ body {
 }
 
 .action-button:hover, #pip-button:hover, #settings-button:hover {
-  background-color: rgba(244, 117, 33, 0.1);
+  background-color: rgba(33, 150, 243, 0.1); 
   color: #ffffff;
 }
 
@@ -104,12 +104,12 @@ body {
 }
 
 .nav-button.active {
-  background-color: #f47521;
+  background-color: #2196F3;
   color: #fff;
 }
 
 #pip-button.active {
-  background-color: #f47521;
+  background-color: #2196F3; 
   color: #fff;
 }
 
@@ -183,7 +183,7 @@ body {
 
 .loading-text {
   font-size: 16px;
-  color: #f47521;
+  color: #2196F3;
   margin-top: 10px;
 }
 
@@ -225,7 +225,7 @@ body {
 }
 
 .modal-header h2 {
-  color: #f47521;
+  color: #2196F3;
   font-size: 18px;
   font-weight: 600;
 }
@@ -238,7 +238,7 @@ body {
 }
 
 .close-modal:hover {
-  color: #f47521;
+  color: #2196F3;
 }
 
 .modal-body {
@@ -279,7 +279,7 @@ body {
 input[type="checkbox"], input[type="radio"] {
   margin-right: 10px;
   cursor: pointer;
-  accent-color: #f47521;
+  accent-color: #2196F3; 
 }
 
 .settings-actions {
@@ -301,12 +301,12 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 .primary-button {
-  background-color: #f47521;
+  background-color: #2196F3; 
   color: white;
 }
 
 .primary-button:hover {
-  background-color: #ff8c3e;
+  background-color: #1976D2;
 }
 
 .secondary-button {
@@ -329,12 +329,12 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #f47521;
+  background: #2196F3; 
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ff8c3e;
+  background: #1976D2; 
 }
 
 
@@ -397,7 +397,7 @@ input[type="checkbox"], input[type="radio"] {
 
 .mini-video-title {
   font-size: 12px;
-  color: #f47521;
+  color: #2196F3; 
   font-weight: 500;
 }
 
@@ -437,10 +437,6 @@ input[type="checkbox"], input[type="radio"] {
   border: none;
 }
 
-
-/* Add these styles at an appropriate location in your CSS file */
-
-/* Update button animation */
 @keyframes pulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
@@ -448,11 +444,10 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 #update-button.has-update {
-  color: #f47521;
+  color: #2196F3; 
   animation: pulse 2s infinite;
 }
 
-/* Progress bar styles */
 .progress-bar-container {
   background-color: #333;
   border-radius: 4px;
@@ -462,7 +457,7 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 #progress-bar {
-  background-color: #f47521;
+  background-color: #2196F3; 
   height: 100%;
   width: 0%;
   transition: width 0.3s ease;
@@ -475,7 +470,6 @@ input[type="checkbox"], input[type="radio"] {
   color: #ccc;
 }
 
-/* Update notification styles */
 #update-notes {
   margin-top: 10px;
   max-height: 200px;
@@ -490,7 +484,7 @@ input[type="checkbox"], input[type="radio"] {
 #update-notes h1, #update-notes h2, #update-notes h3 {
   margin-top: 10px;
   margin-bottom: 5px;
-  color: #f47521;
+  color: #2196F3; 
 }
 
 #update-notes h1 {

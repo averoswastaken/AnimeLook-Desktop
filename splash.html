@@ -36,7 +36,7 @@
     
     .status-text {
       font-size: 16px;
-      color: #f47521;
+      color: #2196F3; /* Turuncu (#f47521) -> Mavi (#2196F3) */
       margin-bottom: 20px;
       font-weight: 500;
     }
@@ -59,7 +59,7 @@
     .progress-bar {
       height: 100%;
       width: 0%;
-      background-color: #f47521;
+      background-color: #2196F3; /* Turuncu (#f47521) -> Mavi (#2196F3) */
       transition: width 0.3s ease;
     }
     
@@ -83,7 +83,7 @@
 </head>
 <body>
   <div class="splash-container">
-    <img src="assets/icon.ico" alt="AnimeLook Logo" class="logo">
+    <img src="assets/splash.png" alt="AnimeLook Logo" class="logo">
     <div id="status-text" class="status-text">Uygulama Yükleniyor...</div>
     <div id="version-text" class="version-text"></div>
     
@@ -110,7 +110,7 @@
       versionText.textContent = `Sürüm: ${version}`;
     }).catch(err => {
       console.error('Version bilgisi alınamadı:', err);
-      versionText.textContent = 'Sürüm: 1.0.0';
+      versionText.textContent = 'Sürüm: 2.0.1';
     });
     
     // Listen for update status

@@ -58,19 +58,12 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
     ::-webkit-scrollbar-thumb {
-      background: #f47521;
+      background: #2196F3;
       border-radius: 5px;
     }
     
     ::-webkit-scrollbar-thumb:hover {
-      background: #ff8c3e;
-    }
-    
-    /* Tam ekran video oynatıcı kontrolleri için stil */
-    .video-fullscreen .vjs-control-bar {
-      z-index: 9999 !important;
-      bottom: 48px !important;
-      position: fixed !important;
+      background: #1976D2;
     }
   `;
   document.head.appendChild(style);
