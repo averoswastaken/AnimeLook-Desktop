@@ -12,9 +12,6 @@ A desktop application for AnimeLook.com that provides a seamless anime watching 
 - Performance optimization settings
 - Start with Windows option
 
-## Disclaimer
-- This App Protected by MIT Lisence
-
 ## 📛 License and Terms of Use
 
 - This project is closed source. Unauthorized use, reproduction, distribution and commercial use of the codes are prohibited.
