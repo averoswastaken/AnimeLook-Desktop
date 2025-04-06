@@ -1,7 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 
-// Add these to the electronAPI object
 contextBridge.exposeInMainWorld('electronAPI', {
 
   windowControl: (action) => ipcRenderer.send('window-control', action),

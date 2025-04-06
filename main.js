@@ -22,7 +22,6 @@ let isQuitting = false;
 let currentUrl = "https://animelook.net/";
 let splashWindow = null;
 
-// Set auto launch settings
 const setAutoLaunch = (enabled) => {
   app.setLoginItemSettings({
     openAtLogin: enabled,
@@ -30,7 +29,6 @@ const setAutoLaunch = (enabled) => {
   });
 };
 
-// Apply performance settings based on mode
 function applyPerformanceSettings(mode) {
   if (!mainWindow) return;
   
@@ -52,7 +50,6 @@ function applyPerformanceSettings(mode) {
   }
 }
 
-// Create the splash window
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 400,
@@ -80,7 +77,6 @@ function createSplashWindow() {
   });
 }
 
-// Create the main application window
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -92,33 +88,26 @@ function createWindow() {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
       partition: 'persist:animelook',
-      // Çerezleri ve oturum bilgilerini kaydetmek için
       cache: true,
       persistentCookies: true
     },
     frame: false, 
     backgroundColor: '#2e2c29',
-    show: false // Don't show immediately
+    show: false
   });
 
   mainWindow.loadFile('index.html');
   
-  // Set up event listeners for the main window
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    // Eğer animelook.net domain'ine aitse aynı pencerede aç
     if (url.includes('animelook.net')) {
       return { action: 'allow' };
     }
-    // Diğer linkleri dış tarayıcıda aç
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  // Start in maximized mode (pencereli tam ekran)
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize();
-    // Gerçek tam ekran modunu kaldırdık, sadece maximize edilmiş pencere kullanıyoruz
-    // mainWindow.setFullScreen(true);
   });
 
   mainWindow.webContents.on('did-start-loading', () => {
@@ -181,7 +170,6 @@ function createWindow() {
   });
 }
 
-// Create the PiP window
 function createPipWindow(url, videoElement) {
   const { width: screenWidth, height: screenHeight } = require('electron').screen.getPrimaryDisplay().workAreaSize;
   
@@ -200,7 +188,7 @@ function createPipWindow(url, videoElement) {
       contextIsolation: true,
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
-      partition: 'persist:animelook' // Ensure same partition is used
+      partition: 'persist:animelook'
     },
     backgroundColor: '#1a1a1a',
     minWidth: 320,
@@ -431,7 +419,6 @@ function createPipWindow(url, videoElement) {
   });
 }
 
-// Close the PiP window
 function closePipWindow() {
   if (pipWindow) {
     pipWindow.close();
@@ -445,7 +432,6 @@ function closePipWindow() {
   }
 }
 
-// Create the system tray
 function createTray() {
   tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
   const contextMenu = Menu.buildFromTemplate([
@@ -483,7 +469,6 @@ function createTray() {
   });
 }
 
-// Set up IPC communication
 function setupIPC() {
   ipcMain.on('toggle-mini-mode', (event, isActive) => {
     if (!mainWindow) return;
@@ -602,12 +587,10 @@ function setupIPC() {
     };
   });
   
-  // Add handler for app version
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
   });
 
-  // Add these new IPC handlers for updates
   ipcMain.on('check-for-updates', () => {
     updater.checkForUpdates();
   });
@@ -626,10 +609,8 @@ function setupIPC() {
       splashWindow = null;
     }
     
-    // Ana pencere henüz oluşturulmadıysa oluştur
     if (!mainWindow) {
       createWindow();
-      // Ana pencere oluşturulduktan sonra updater'ı güncelle
       updater.initUpdater(mainWindow, null);
     } else {
       mainWindow.show();
@@ -638,16 +619,12 @@ function setupIPC() {
   });
 }
 
-// Tek instance çalışmasını sağla
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  // Eğer başka bir instance zaten çalışıyorsa, bu instance'ı kapat
   app.quit();
 } else {
-  // İkinci bir instance başlatılmaya çalışıldığında
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Eğer ana pencere varsa, minimize edilmişse restore et ve focus ver
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       if (!mainWindow.isVisible()) mainWindow.show();
@@ -655,26 +632,18 @@ if (!gotTheLock) {
     }
   });
 
-  // App initialization
   app.whenReady().then(() => {
-    // Set up IPC handlers first
     setupIPC();
     
-    // Create splash window first
     createSplashWindow();
     
-    // Create system tray
     createTray();
     
-    // Initialize updater with splash window only initially
     updater.initUpdater(null, splashWindow);
     
-    // Apply settings
     setAutoLaunch(store.get('startAtBoot'));
     applyPerformanceSettings(store.get('performanceMode'));
     
-    // Main window will be created after splash screen checks are complete
-    // This is handled by the 'show-main-window' IPC event
   });
 }
 

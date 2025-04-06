@@ -510,7 +510,6 @@ function resetVideoPlayerControls() {
 }
 
 
-// Add these variables at the top with other declarations
 const updateButton = document.getElementById('update-button');
 const updateNotification = document.getElementById('update-notification');
 const closeUpdateModal = document.getElementById('close-update-modal');
@@ -526,7 +525,6 @@ const installUpdateButton = document.getElementById('install-update-button');
 
 let hasUpdate = false;
 
-// Add these functions to handle updates
 function toggleUpdateNotification(show) {
   if (show) {
     updateNotification.classList.add('visible');
@@ -542,7 +540,6 @@ function handleUpdateStatus(status) {
     updateMessage.textContent = status.message;
   }
   
-  // Handle download progress
   if (status.data && status.data.percent !== undefined) {
     updateProgress.style.display = 'block';
     const percent = Math.round(status.data.percent);
@@ -550,7 +547,6 @@ function handleUpdateStatus(status) {
     progressText.textContent = `${percent}%`;
   }
   
-  // Show install button when download is complete
   if (status.message === 'Güncelleme indirildi') {
     downloadUpdateButton.style.display = 'none';
     installUpdateButton.style.display = 'inline-block';
@@ -561,7 +557,6 @@ function handleUpdateAvailable(info) {
   hasUpdate = true;
   updateButton.style.display = 'flex';
   
-  // Update notification content
   updateVersion.textContent = `Sürüm: ${info.version}`;
   if (info.releaseNotes) {
     updateNotes.innerHTML = `<strong>Değişiklikler:</strong><br>${formatReleaseNotes(info.releaseNotes)}`;
@@ -569,14 +564,12 @@ function handleUpdateAvailable(info) {
     updateNotes.textContent = '';
   }
   
-  // Show download button
   downloadUpdateButton.style.display = 'inline-block';
 }
 
 function formatReleaseNotes(notes) {
   if (!notes) return '';
   
-  // Convert markdown to simple HTML
   return notes
     .replace(/\r\n/g, '\n')
     .replace(/\n\n/g, '<br><br>')
@@ -588,7 +581,6 @@ function formatReleaseNotes(notes) {
     .replace(/# (.*?)\n/g, '<h1>$1</h1>');
 }
 
-// Add these event listeners
 updateButton.addEventListener('click', () => {
   toggleUpdateNotification(true);
 });
@@ -613,11 +605,9 @@ installUpdateButton.addEventListener('click', () => {
   window.electronAPI.installUpdate();
 });
 
-// Add these event listeners for update-related events
 window.electronAPI.onUpdateStatus(handleUpdateStatus);
 window.electronAPI.onUpdateAvailable(handleUpdateAvailable);
 
-// Add this to the existing modal click handler
 updateNotification.addEventListener('click', (event) => {
   if (event.target === updateNotification) {
     toggleUpdateNotification(false);
