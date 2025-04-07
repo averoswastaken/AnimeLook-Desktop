@@ -15,6 +15,7 @@ const closeButton = document.getElementById('close-button');
 const backButton = document.getElementById('back-button');
 const forwardButton = document.getElementById('forward-button');
 const reloadButton = document.getElementById('reload-button');
+const clearCacheButton = document.getElementById('clear-cache-button');
 const pipButton = document.getElementById('pip-button');
 const settingsButton = document.getElementById('settings-button');
 const closePipButton = document.getElementById('close-pip-button');
@@ -166,8 +167,7 @@ webview.addEventListener('did-finish-load', () => {
           if (e.ctrlKey || 
               urlObj.hostname.includes('instagram.com') || 
               urlObj.hostname.includes('twitter.com') || 
-              urlObj.hostname.includes('facebook.com') || 
-              urlObj.hostname.includes('youtube.com')) {
+              urlObj.hostname.includes('facebook.com') {
             window.open(url, '_blank');
           } else {
             window.location.href = url;
@@ -232,6 +232,34 @@ reloadButton.addEventListener('click', () => {
   webview.reload();
 });
 
+// Önbellek temizleme butonu işlevselliği
+clearCacheButton.addEventListener('click', async () => {
+  if (confirm('Önbellek temizlenecek. Bu işlem uygulamanın performansını geçici olarak etkileyebilir. Devam etmek istiyor musunuz?')) {
+    try {
+      // Önbellek temizleme işlemi başladığında yükleme ekranını göster
+      toggleLoadingScreen(true);
+      
+      // Main process'teki önbellek temizleme fonksiyonunu çağır
+      const result = await window.electronAPI.clearCache();
+      
+      // Yükleme ekranını gizle
+      toggleLoadingScreen(false);
+      
+      if (result.success) {
+        alert(`Önbellek başarıyla temizlendi. ${result.deletedFiles} dosya silindi.`);
+        // Sayfayı yenile
+        webview.reload();
+      } else {
+        alert('Önbellek temizlenirken bir hata oluştu: ' + (result.error || 'Bilinmeyen hata'));
+      }
+    } catch (error) {
+      toggleLoadingScreen(false);
+      alert('Önbellek temizlenirken bir hata oluştu: ' + error.message);
+      console.error('Önbellek temizleme hatası:', error);
+    }
+  }
+});
+
 
 pipButton.addEventListener('click', async () => {
 
@@ -245,10 +273,53 @@ pipButton.addEventListener('click', async () => {
       videoUrl = await window.electronAPI.getCurrentUrl();
     }
     
+    // Ana sayfadaki videoyu durdur - Geliştirilmiş yöntem
+    if (videoInfo.videoElement === 'video') {
+      await webview.executeJavaScript(`
+        (function() {
+          const videos = document.querySelectorAll('video');
+          if (videos.length > 0) {
+            // Video oynatma durumunu kaydet
+            const isPlaying = !!(videos[0].currentTime > 0 && !videos[0].paused && !videos[0].ended && videos[0].readyState > 2);
+            console.log('Video durduruluyor. Oynatma durumu:', isPlaying, 'Konum:', videos[0].currentTime);
+            
+            // Önce videoyu tıklayarak durdurma deneyelim
+            try {
+              // Video elementine tıklama
+              videos[0].click();
+              console.log('Video tıklandı');
+              
+              // Kısa bir bekleme sonrası pause() metodunu da çağıralım
+              setTimeout(() => {
+                if (!videos[0].paused) {
+                  videos[0].pause();
+                  console.log('Video pause() metodu ile durduruldu');
+                }
+              }, 100);
+            } catch (e) {
+              console.error('Video tıklama hatası:', e);
+              // Hata durumunda yedek yöntem
+              if (!videos[0].paused) {
+                videos[0].pause();
+              }
+            }
+            return true;
+          }
+          return false;
+        })();
+      `);
+    }
 
-    window.electronAPI.togglePictureInPicture(videoUrl, videoInfo.hasVideo, videoInfo.videoElement);
+    // PIP penceresine video bilgilerini gönder
+    window.electronAPI.togglePictureInPicture(
+      videoUrl, 
+      videoInfo.hasVideo, 
+      videoInfo.videoElement, 
+      videoInfo.currentTime, 
+      videoInfo.videoId
+    );
 
-    console.log('Video penceresi açıldı. Ana uygulama gizlendi.');
+    console.log('Video penceresi açıldı. Ana uygulama gizlendi. Video konumu:', videoInfo.currentTime);
   } else {
     alert('Bu sayfada video bulunamadı!');
   }
@@ -307,7 +378,14 @@ async function checkForVideoContent() {
         if (videos.length > 0) {
          
           console.log('Video elementi bulundu');
-          return { hasVideo: true, videoElement: 'video', videoSrc: videos[0].src || '' };
+          return { 
+            hasVideo: true, 
+            videoElement: 'video', 
+            videoSrc: videos[0].src || '',
+            currentTime: videos[0].currentTime || 0,
+            duration: videos[0].duration || 0,
+            videoId: 'video-' + Math.random().toString(36).substr(2, 9)
+          };
         }
         
        
@@ -315,7 +393,14 @@ async function checkForVideoContent() {
         if (iframes.length > 0) {
          
           console.log('iframe elementi bulundu');
-          return { hasVideo: true, videoElement: 'iframe', videoSrc: iframes[0].src || '' };
+          return { 
+            hasVideo: true, 
+            videoElement: 'iframe', 
+            videoSrc: iframes[0].src || '',
+            currentTime: 0,
+            duration: 0,
+            videoId: 'iframe-' + Math.random().toString(36).substr(2, 9)
+          };
         }
         
        
@@ -325,14 +410,35 @@ async function checkForVideoContent() {
 
           const playerIframe = videoPlayers[0].querySelector('iframe');
           if (playerIframe) {
-            return { hasVideo: true, videoElement: 'iframe', videoSrc: playerIframe.src || '' };
+            return { 
+              hasVideo: true, 
+              videoElement: 'iframe', 
+              videoSrc: playerIframe.src || '',
+              currentTime: 0,
+              duration: 0,
+              videoId: 'player-iframe-' + Math.random().toString(36).substr(2, 9)
+            };
           }
 
           const playerVideo = videoPlayers[0].querySelector('video');
           if (playerVideo) {
-            return { hasVideo: true, videoElement: 'video', videoSrc: playerVideo.src || '' };
+            return { 
+              hasVideo: true, 
+              videoElement: 'video', 
+              videoSrc: playerVideo.src || '',
+              currentTime: playerVideo.currentTime || 0,
+              duration: playerVideo.duration || 0,
+              videoId: 'player-video-' + Math.random().toString(36).substr(2, 9)
+            };
           }
-          return { hasVideo: true, videoElement: 'player', videoSrc: '' };
+          return { 
+            hasVideo: true, 
+            videoElement: 'player', 
+            videoSrc: '',
+            currentTime: 0,
+            duration: 0,
+            videoId: 'player-' + Math.random().toString(36).substr(2, 9)
+          };
         }
         
 
@@ -342,14 +448,35 @@ async function checkForVideoContent() {
 
           const animelookIframe = animelookPlayers[0].querySelector('iframe');
           if (animelookIframe) {
-            return { hasVideo: true, videoElement: 'iframe', videoSrc: animelookIframe.src || '' };
+            return { 
+              hasVideo: true, 
+              videoElement: 'iframe', 
+              videoSrc: animelookIframe.src || '',
+              currentTime: 0,
+              duration: 0,
+              videoId: 'anime-iframe-' + Math.random().toString(36).substr(2, 9)
+            };
           }
 
           const animelookVideo = animelookPlayers[0].querySelector('video');
           if (animelookVideo) {
-            return { hasVideo: true, videoElement: 'video', videoSrc: animelookVideo.src || '' };
+            return { 
+              hasVideo: true, 
+              videoElement: 'video', 
+              videoSrc: animelookVideo.src || '',
+              currentTime: animelookVideo.currentTime || 0,
+              duration: animelookVideo.duration || 0,
+              videoId: 'anime-video-' + Math.random().toString(36).substr(2, 9)
+            };
           }
-          return { hasVideo: true, videoElement: 'player', videoSrc: '' };
+          return { 
+            hasVideo: true, 
+            videoElement: 'player', 
+            videoSrc: '',
+            currentTime: 0,
+            duration: 0,
+            videoId: 'anime-player-' + Math.random().toString(36).substr(2, 9)
+          };
         }
         
 
@@ -359,24 +486,45 @@ async function checkForVideoContent() {
 
           const genericIframe = genericPlayers[0].querySelector('iframe');
           if (genericIframe) {
-            return { hasVideo: true, videoElement: 'iframe', videoSrc: genericIframe.src || '' };
+            return { 
+              hasVideo: true, 
+              videoElement: 'iframe', 
+              videoSrc: genericIframe.src || '',
+              currentTime: 0,
+              duration: 0,
+              videoId: 'generic-iframe-' + Math.random().toString(36).substr(2, 9)
+            };
           }
           const genericVideo = genericPlayers[0].querySelector('video');
           if (genericVideo) {
-            return { hasVideo: true, videoElement: 'video', videoSrc: genericVideo.src || '' };
+            return { 
+              hasVideo: true, 
+              videoElement: 'video', 
+              videoSrc: genericVideo.src || '',
+              currentTime: genericVideo.currentTime || 0,
+              duration: genericVideo.duration || 0,
+              videoId: 'generic-video-' + Math.random().toString(36).substr(2, 9)
+            };
           }
-          return { hasVideo: true, videoElement: 'player', videoSrc: '' };
+          return { 
+            hasVideo: true, 
+            videoElement: 'player', 
+            videoSrc: '',
+            currentTime: 0,
+            duration: 0,
+            videoId: 'generic-player-' + Math.random().toString(36).substr(2, 9)
+          };
         }
         
         console.log('Hiçbir video içeriği bulunamadı');
-        return { hasVideo: false, videoElement: null, videoSrc: '' };
+        return { hasVideo: false, videoElement: null, videoSrc: '', currentTime: 0, duration: 0, videoId: null };
       })();
     `);
     
     return result;
   } catch (error) {
     console.error('Video içeriği kontrol edilirken hata oluştu:', error);
-    return { hasVideo: false, videoElement: null, videoSrc: '' };
+    return { hasVideo: false, videoElement: null, videoSrc: '', currentTime: 0, duration: 0, videoId: null };
   }
 }
 
@@ -510,6 +658,7 @@ function resetVideoPlayerControls() {
 }
 
 
+// Add these variables at the top with other declarations
 const updateButton = document.getElementById('update-button');
 const updateNotification = document.getElementById('update-notification');
 const closeUpdateModal = document.getElementById('close-update-modal');
@@ -525,6 +674,7 @@ const installUpdateButton = document.getElementById('install-update-button');
 
 let hasUpdate = false;
 
+// Add these functions to handle updates
 function toggleUpdateNotification(show) {
   if (show) {
     updateNotification.classList.add('visible');
@@ -540,6 +690,7 @@ function handleUpdateStatus(status) {
     updateMessage.textContent = status.message;
   }
   
+  // Handle download progress
   if (status.data && status.data.percent !== undefined) {
     updateProgress.style.display = 'block';
     const percent = Math.round(status.data.percent);
@@ -547,6 +698,7 @@ function handleUpdateStatus(status) {
     progressText.textContent = `${percent}%`;
   }
   
+  // Show install button when download is complete
   if (status.message === 'Güncelleme indirildi') {
     downloadUpdateButton.style.display = 'none';
     installUpdateButton.style.display = 'inline-block';
@@ -557,6 +709,7 @@ function handleUpdateAvailable(info) {
   hasUpdate = true;
   updateButton.style.display = 'flex';
   
+  // Update notification content
   updateVersion.textContent = `Sürüm: ${info.version}`;
   if (info.releaseNotes) {
     updateNotes.innerHTML = `<strong>Değişiklikler:</strong><br>${formatReleaseNotes(info.releaseNotes)}`;
@@ -564,12 +717,14 @@ function handleUpdateAvailable(info) {
     updateNotes.textContent = '';
   }
   
+  // Show download button
   downloadUpdateButton.style.display = 'inline-block';
 }
 
 function formatReleaseNotes(notes) {
   if (!notes) return '';
   
+  // Convert markdown to simple HTML
   return notes
     .replace(/\r\n/g, '\n')
     .replace(/\n\n/g, '<br><br>')
@@ -581,6 +736,7 @@ function formatReleaseNotes(notes) {
     .replace(/# (.*?)\n/g, '<h1>$1</h1>');
 }
 
+// Add these event listeners
 updateButton.addEventListener('click', () => {
   toggleUpdateNotification(true);
 });
@@ -605,9 +761,11 @@ installUpdateButton.addEventListener('click', () => {
   window.electronAPI.installUpdate();
 });
 
+// Add these event listeners for update-related events
 window.electronAPI.onUpdateStatus(handleUpdateStatus);
 window.electronAPI.onUpdateAvailable(handleUpdateAvailable);
 
+// Add this to the existing modal click handler
 updateNotification.addEventListener('click', (event) => {
   if (event.target === updateNotification) {
     toggleUpdateNotification(false);

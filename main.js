@@ -22,6 +22,7 @@ let isQuitting = false;
 let currentUrl = "https://animelook.net/";
 let splashWindow = null;
 
+// Set auto launch settings
 const setAutoLaunch = (enabled) => {
   app.setLoginItemSettings({
     openAtLogin: enabled,
@@ -29,6 +30,7 @@ const setAutoLaunch = (enabled) => {
   });
 };
 
+// Apply performance settings based on mode
 function applyPerformanceSettings(mode) {
   if (!mainWindow) return;
   
@@ -50,6 +52,7 @@ function applyPerformanceSettings(mode) {
   }
 }
 
+// Create the splash window
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 400,
@@ -77,6 +80,7 @@ function createSplashWindow() {
   });
 }
 
+// Create the main application window
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -88,26 +92,33 @@ function createWindow() {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
       partition: 'persist:animelook',
+      // Çerezleri ve oturum bilgilerini kaydetmek için
       cache: true,
       persistentCookies: true
     },
     frame: false, 
     backgroundColor: '#2e2c29',
-    show: false
+    show: false // Don't show immediately
   });
 
   mainWindow.loadFile('index.html');
   
+  // Set up event listeners for the main window
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Eğer animelook.net domain'ine aitse aynı pencerede aç
     if (url.includes('animelook.net')) {
       return { action: 'allow' };
     }
+    // Diğer linkleri dış tarayıcıda aç
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
+  // Start in maximized mode (pencereli tam ekran)
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize();
+    // Gerçek tam ekran modunu kaldırdık, sadece maximize edilmiş pencere kullanıyoruz
+    // mainWindow.setFullScreen(true);
   });
 
   mainWindow.webContents.on('did-start-loading', () => {
@@ -170,7 +181,8 @@ function createWindow() {
   });
 }
 
-function createPipWindow(url, videoElement) {
+// Create the PiP window
+function createPipWindow(url, videoElement, currentTime, videoId) {
   const { width: screenWidth, height: screenHeight } = require('electron').screen.getPrimaryDisplay().workAreaSize;
   
   pipWindow = new BrowserWindow({
@@ -291,6 +303,8 @@ function createPipWindow(url, videoElement) {
   pipWindow.webContents.on('did-finish-load', () => {
     pipWindow.webContents.executeJavaScript(`
       const pipWebview = document.getElementById('pip-webview');
+      const videoStartTime = ${currentTime || 0};
+      const videoId = "${videoId || ''}";
       
       function findAndFocusMediaElement() {
         pipWebview.executeJavaScript(
@@ -305,33 +319,91 @@ function createPipWindow(url, videoElement) {
             ];
             
             const allMediaElements = document.querySelectorAll(mediaSelectors.join(', '));
+            let videoFound = false;
             
-            if (allMediaElements.length > 0) {
-              allMediaElements[0].scrollIntoView({behavior: 'smooth', block: 'center'});
-              console.log('PiP: Medya elementi bulundu ve odaklandı: ' + allMediaElements[0].tagName);
+            // Önce video elementlerini kontrol et
+            for (let i = 0; i < allMediaElements.length; i++) {
+              const element = allMediaElements[i];
               
-              if (allMediaElements[0].tagName.toLowerCase() === 'iframe') {
-                allMediaElements[0].style.display = 'block';
-                allMediaElements[0].style.visibility = 'visible';
-                allMediaElements[0].style.opacity = '1';
+              if (element.tagName.toLowerCase() === 'video') {
+                videoFound = true;
+                element.scrollIntoView({behavior: 'smooth', block: 'center'});
+                console.log('PiP: Video elementi bulundu ve odaklandı');
                 
-                let parent = allMediaElements[0].parentElement;
-                while (parent) {
-                  const style = window.getComputedStyle(parent);
-                  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-                    parent.style.display = 'block';
-                    parent.style.visibility = 'visible';
-                    parent.style.opacity = '1';
+                // Video hazır olduğunda belirtilen konumdan başlat
+                const startVideo = () => {
+                  const timeToSet = ${currentTime || 0};
+                  if (timeToSet > 0) {
+                    console.log('PiP: Video kaldığı yerden başlatılıyor:', timeToSet);
+                    element.currentTime = timeToSet;
+                    
+                    // Video oynatmayı birkaç kez dene
+                    const attemptPlay = (attempts = 0) => {
+                      if (attempts > 5) return;
+                      
+                      element.play().then(() => {
+                        console.log('PiP: Video başarıyla başlatıldı');
+                      }).catch(e => {
+                        console.error('PiP: Video oynatma hatası:', e);
+                        // Yeniden deneme
+                        setTimeout(() => attemptPlay(attempts + 1), 500);
+                      });
+                    };
+                    
+                    attemptPlay();
                   }
-                  parent = parent.parentElement;
+                };
+                
+                if (element.readyState >= 2) {
+                  startVideo();
+                } else {
+                  element.addEventListener('loadeddata', startVideo, { once: true });
+                  element.addEventListener('canplay', startVideo, { once: true });
+                  // Ek olarak bir timeout ile de kontrol et
+                  setTimeout(startVideo, 1000);
                 }
+                
+                break;
               }
-              
-              return true;
             }
             
-            console.log('PiP: Hiçbir medya elementi bulunamadı');
-            return false;
+            // Video bulunamadıysa iframe'leri kontrol et
+            if (!videoFound && allMediaElements.length > 0) {
+              for (let i = 0; i < allMediaElements.length; i++) {
+                const element = allMediaElements[i];
+                
+                if (element.tagName.toLowerCase() === 'iframe') {
+                  element.scrollIntoView({behavior: 'smooth', block: 'center'});
+                  console.log('PiP: Iframe elementi bulundu ve odaklandı');
+                  
+                  // iframe'i görünür yap
+                  element.style.display = 'block';
+                  element.style.visibility = 'visible';
+                  element.style.opacity = '1';
+                  
+                  // Üst elementleri de görünür yap
+                  let parent = element.parentElement;
+                  while (parent) {
+                    const style = window.getComputedStyle(parent);
+                    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                      parent.style.display = 'block';
+                      parent.style.visibility = 'visible';
+                      parent.style.opacity = '1';
+                    }
+                    parent = parent.parentElement;
+                  }
+                  
+                  break;
+                }
+              }
+            }
+            
+            if (allMediaElements.length === 0) {
+              console.log('PiP: Hiçbir medya elementi bulunamadı');
+              return false;
+            }
+            
+            return true;
           })()\`
         ).catch(err => console.error('PiP medya arama hatası:', err));
       }
@@ -356,10 +428,71 @@ function createPipWindow(url, videoElement) {
               ];
               
               const allMediaElements = document.querySelectorAll(mediaSelectors.join(', '));
+              let videoFound = false;
               
-              if (allMediaElements.length > 0) {
-                allMediaElements[0].scrollIntoView({behavior: 'smooth', block: 'center'});
-                console.log('PiP: DOM değişikliği sonrası medya elementi bulundu: ' + allMediaElements[0].tagName);
+              // Önce video elementlerini kontrol et
+              for (let i = 0; i < allMediaElements.length; i++) {
+                const element = allMediaElements[i];
+                
+                if (element.tagName.toLowerCase() === 'video') {
+                  videoFound = true;
+                  element.scrollIntoView({behavior: 'smooth', block: 'center'});
+                  console.log('PiP: DOM değişikliği sonrası video elementi bulundu');
+                  
+                  // Video hazır olduğunda belirtilen konumdan başlat
+                  if (videoStartTime > 0) {
+                    console.log('PiP: DOM değişikliği sonrası video kaldığı yerden başlatılıyor:', videoStartTime);
+                    element.currentTime = videoStartTime;
+                    
+                    // Video oynatmayı birkaç kez dene
+                    const attemptPlay = (attempts = 0) => {
+                      if (attempts > 5) return;
+                      
+                      element.play().then(() => {
+                        console.log('PiP: Video başarıyla başlatıldı');
+                      }).catch(e => {
+                        console.error('PiP: Video oynatma hatası:', e);
+                        // Yeniden deneme
+                        setTimeout(() => attemptPlay(attempts + 1), 500);
+                      });
+                    };
+                    
+                    attemptPlay();
+                  }
+                  
+                  break;
+                }
+              }
+              
+              // Video bulunamadıysa iframe'leri kontrol et
+              if (!videoFound && allMediaElements.length > 0) {
+                for (let i = 0; i < allMediaElements.length; i++) {
+                  const element = allMediaElements[i];
+                  
+                  if (element.tagName.toLowerCase() === 'iframe') {
+                    element.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    console.log('PiP: DOM değişikliği sonrası iframe elementi bulundu');
+                    
+                    // iframe'i görünür yap
+                    element.style.display = 'block';
+                    element.style.visibility = 'visible';
+                    element.style.opacity = '1';
+                    
+                    // Üst elementleri de görünür yap
+                    let parent = element.parentElement;
+                    while (parent) {
+                      const style = window.getComputedStyle(parent);
+                      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                        parent.style.display = 'block';
+                        parent.style.visibility = 'visible';
+                        parent.style.opacity = '1';
+                      }
+                      parent = parent.parentElement;
+                    }
+                    
+                    break;
+                  }
+                }
               }
             }, 500); 
           });
@@ -419,6 +552,7 @@ function createPipWindow(url, videoElement) {
   });
 }
 
+// Close the PiP window
 function closePipWindow() {
   if (pipWindow) {
     pipWindow.close();
@@ -432,6 +566,7 @@ function closePipWindow() {
   }
 }
 
+// Create the system tray
 function createTray() {
   tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
   const contextMenu = Menu.buildFromTemplate([
@@ -469,6 +604,57 @@ function createTray() {
   });
 }
 
+// Önbellek temizleme fonksiyonu
+function clearAppCache() {
+  return new Promise((resolve, reject) => {
+    try {
+      // Uygulama verilerinin saklandığı dizin
+      const userDataPath = app.getPath('userData');
+      
+      // Önbellek dizinleri (partition: persist:animelook için)
+      const cachePaths = [
+        path.join(userDataPath, 'Cache'),
+        path.join(userDataPath, 'Code Cache'),
+        path.join(userDataPath, 'GPUCache')
+      ];
+      
+      // Kritik olmayan önbellek dosyalarını temizle
+      let deletedFiles = 0;
+      let errors = 0;
+      
+      cachePaths.forEach(cachePath => {
+        if (fs.existsSync(cachePath)) {
+          try {
+            const files = fs.readdirSync(cachePath);
+            files.forEach(file => {
+              // Kritik dosyaları atla (index dosyaları, veritabanı dosyaları vb.)
+              if (!file.includes('index') && !file.includes('.db') && !file.includes('MANIFEST')) {
+                try {
+                  fs.unlinkSync(path.join(cachePath, file));
+                  deletedFiles++;
+                } catch (err) {
+                  console.error(`Dosya silinemedi: ${file}`, err);
+                  errors++;
+                }
+              }
+            });
+          } catch (err) {
+            console.error(`Dizin okunamadı: ${cachePath}`, err);
+            errors++;
+          }
+        }
+      });
+      
+      console.log(`Önbellek temizlendi: ${deletedFiles} dosya silindi, ${errors} hata oluştu`);
+      resolve({ deletedFiles, errors });
+    } catch (err) {
+      console.error('Önbellek temizlenirken hata oluştu:', err);
+      reject(err);
+    }
+  });
+}
+
+// Set up IPC communication
 function setupIPC() {
   ipcMain.on('toggle-mini-mode', (event, isActive) => {
     if (!mainWindow) return;
@@ -491,12 +677,55 @@ function setupIPC() {
     mainWindow.webContents.send('mini-mode-change', isActive);
   });
   
-  ipcMain.on('toggle-pip-mode', (event, url, hasVideo, videoElement) => {
+  ipcMain.on('toggle-pip-mode', (event, url, hasVideo, videoElement, currentTime, videoId) => {
     if (!pipWindow && hasVideo) {
       const pipUrl = url || currentUrl;
-      console.log('PiP modu başlatılıyor, URL:', pipUrl);
+      console.log('PiP modu başlatılıyor, URL:', pipUrl, 'Video konumu:', currentTime);
       
-      createPipWindow(pipUrl, videoElement);
+      // Ana penceredeki videoyu durdur - Geliştirilmiş yöntem
+      if (mainWindow) {
+        mainWindow.webContents.executeJavaScript(`
+          (function() {
+            const webview = document.getElementById('webview');
+            if (webview) {
+              webview.executeJavaScript(
+                "(function() {\n" +
+                "  const videos = document.querySelectorAll('video');\n" +
+                "  if (videos.length > 0) {\n" +
+                "    console.log('Ana penceredeki video durduruluyor...');\n" +
+                "    // Önce videoyu tıklayarak durdurma deneyelim\n" +
+                "    try {\n" +
+                "      videos[0].click();\n" +
+                "      console.log('Video tıklandı');\n" +
+                "      // Kısa bir bekleme sonrası pause() metodunu da çağıralım\n" +
+                "      setTimeout(() => {\n" +
+                "        if (!videos[0].paused) {\n" +
+                "          videos[0].pause();\n" +
+                "          console.log('Video pause() metodu ile durduruldu');\n" +
+                "        }\n" +
+                "      }, 100);\n" +
+                "    } catch (e) {\n" +
+                "      console.error('Video tıklama hatası:', e);\n" +
+                "    }\n" +
+                "    // Yedek yöntem olarak doğrudan pause() metodunu çağıralım\n" +
+                "    videos.forEach(video => {\n" +
+                "      if (!video.paused) {\n" +
+                "        video.pause();\n" +
+                "        console.log('Video durduruldu');\n" +
+                "      }\n" +
+                "    });\n" +
+                "    return true;\n" +
+                "  }\n" +
+                "  return false;\n" +
+                "})()"
+              ).catch(err => console.log('Video durdurma iç hata:', err));
+            }
+            return true;
+          })()
+        `).catch(err => console.error('Video durdurma hatası:', err));
+      }
+      
+      createPipWindow(pipUrl, videoElement, currentTime, videoId);
       mainWindow.hide();
       mainWindow.webContents.send('pip-mode-change', true);
     } else if (pipWindow) {
@@ -587,10 +816,23 @@ function setupIPC() {
     };
   });
   
+  // Add handler for app version
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
   });
+  
+  // Önbellek temizleme handler'ı
+  ipcMain.handle('clear-cache', async () => {
+    try {
+      const result = await clearAppCache();
+      return { success: true, ...result };
+    } catch (error) {
+      console.error('Önbellek temizleme hatası:', error);
+      return { success: false, error: error.message };
+    }
+  });
 
+  // Add these new IPC handlers for updates
   ipcMain.on('check-for-updates', () => {
     updater.checkForUpdates();
   });
@@ -609,8 +851,10 @@ function setupIPC() {
       splashWindow = null;
     }
     
+    // Ana pencere henüz oluşturulmadıysa oluştur
     if (!mainWindow) {
       createWindow();
+      // Ana pencere oluşturulduktan sonra updater'ı güncelle
       updater.initUpdater(mainWindow, null);
     } else {
       mainWindow.show();
@@ -619,12 +863,16 @@ function setupIPC() {
   });
 }
 
+// Tek instance çalışmasını sağla
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
+  // Eğer başka bir instance zaten çalışıyorsa, bu instance'ı kapat
   app.quit();
 } else {
+  // İkinci bir instance başlatılmaya çalışıldığında
   app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Eğer ana pencere varsa, minimize edilmişse restore et ve focus ver
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       if (!mainWindow.isVisible()) mainWindow.show();
@@ -632,18 +880,26 @@ if (!gotTheLock) {
     }
   });
 
+  // App initialization
   app.whenReady().then(() => {
+    // Set up IPC handlers first
     setupIPC();
     
+    // Create splash window first
     createSplashWindow();
     
+    // Create system tray
     createTray();
     
+    // Initialize updater with splash window only initially
     updater.initUpdater(null, splashWindow);
     
+    // Apply settings
     setAutoLaunch(store.get('startAtBoot'));
     applyPerformanceSettings(store.get('performanceMode'));
     
+    // Main window will be created after splash screen checks are complete
+    // This is handled by the 'show-main-window' IPC event
   });
 }
 

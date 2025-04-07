@@ -1,6 +1,6 @@
 {
   "name": "animelook-desktop",
-  "version": "2.5.0",
+  "version": "2.5.2",
   "description": "AnimeLook.com için masaüstü uygulaması",
   "main": "main.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "publish": "electron-builder --win --publish always"
   },
   "author": "AnimeLook",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "devDependencies": {
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",

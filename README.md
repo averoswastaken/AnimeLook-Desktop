@@ -12,6 +12,20 @@ A desktop application for AnimeLook.com that provides a seamless anime watching 
 - Performance optimization settings
 - Start with Windows option
 
-## 📛 License and Terms of Use
+## Installation
 
-- This project is closed source. Unauthorized use, reproduction, distribution and commercial use of the codes are prohibited.
+Download the latest version from the [Releases](https://github.com/averoswastaken/AnimeLook-Desktop/releases) page.
+
+## Development
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- npm (v6 or higher)
+
+### Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/averoswastaken/AnimeLook-Desktop.git
+cd AnimeLook-Desktop

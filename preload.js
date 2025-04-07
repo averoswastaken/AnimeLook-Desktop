@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 
+// Add these to the electronAPI object
 contextBridge.exposeInMainWorld('electronAPI', {
 
   windowControl: (action) => ipcRenderer.send('window-control', action),
@@ -23,7 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onVideoFullscreenChange: (callback) => ipcRenderer.on('video-fullscreen-change', (_, isVideoFullscreen) => callback(isVideoFullscreen)),
   
 
-  togglePictureInPicture: (url, hasVideo, videoElement) => ipcRenderer.send('toggle-pip-mode', url, hasVideo, videoElement),
+  togglePictureInPicture: (url, hasVideo, videoElement, currentTime, videoId) => ipcRenderer.send('toggle-pip-mode', url, hasVideo, videoElement, currentTime, videoId),
   onPipModeChange: (callback) => ipcRenderer.on('pip-mode-change', (_, isPipActive) => callback(isPipActive)),
   getCurrentUrl: () => ipcRenderer.invoke('get-current-url'),
   updateCurrentUrl: (url) => ipcRenderer.send('update-current-url', url),
@@ -39,6 +40,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Get app version
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  
+  // Cache clearing function
+  clearCache: () => ipcRenderer.invoke('clear-cache'),
+  onCacheCleared: (callback) => ipcRenderer.on('cache-cleared', (_, result) => callback(result)),
 });
 
 
@@ -93,8 +98,7 @@ window.addEventListener('DOMContentLoaded', () => {
           // Instagram, Twitter gibi sosyal medya linkleri için dış tarayıcıda aç
           if (urlObj.hostname.includes('instagram.com') || 
               urlObj.hostname.includes('twitter.com') || 
-              urlObj.hostname.includes('facebook.com') || 
-              urlObj.hostname.includes('youtube.com')) {
+              urlObj.hostname.includes('facebook.com') {
             window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
             return null;
           }
