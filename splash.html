@@ -105,7 +105,7 @@
     const progressText = document.getElementById('progress-text');
     const loadingSpinner = document.getElementById('loading-spinner');
     
-    // Get current version
+ 
     ipcRenderer.invoke('get-app-version').then(version => {
       versionText.textContent = `Sürüm: ${version}`;
     }).catch(err => {
@@ -113,7 +113,7 @@
       versionText.textContent = 'Sürüm: 2.5.2';
     });
     
-    // Listen for update status
+ 
     ipcRenderer.on('splash-update-status', (event, data) => {
       statusText.textContent = data.message || 'Uygulama Yükleniyor...';
       
@@ -129,7 +129,7 @@
       }
     });
     
-    // Listen for ready signal
+
     ipcRenderer.on('app-ready', () => {
       statusText.textContent = 'Uygulama Başlatılıyor...';
       setTimeout(() => {
@@ -137,7 +137,7 @@
       }, 500);
     });
     
-    // Fallback in case update check takes too long
+
     setTimeout(() => {
       if (statusText.textContent === 'Uygulama Yükleniyor...') {
         statusText.textContent = 'Uygulama Başlatılıyor...';

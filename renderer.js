@@ -140,6 +140,11 @@ function updateNavigationButtons() {
 
 
 webview.addEventListener('did-finish-load', () => {
+  updateNavigationButtons();
+  
+
+  const currentUrl = webview.getURL();
+  analyzeUrlAndUpdateDiscordRPC(currentUrl);
 
   webview.executeJavaScript(`
     document.addEventListener('fullscreenchange', () => {
@@ -152,18 +157,18 @@ webview.addEventListener('did-finish-load', () => {
       window.postMessage({ type: 'video-fullscreen-change', isFullscreen: !!document.webkitFullscreenElement }, '*');
     });
     
-    // Yeni sekme açma davranışını düzenle
+
     document.querySelectorAll('a[target="_blank"]').forEach(link => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
         const url = link.getAttribute('href');
         const urlObj = new URL(url, window.location.href);
         
-        // Eğer animelook.com domain'ine aitse aynı pencerede aç
+       
         if (urlObj.hostname === 'animelook.com' || urlObj.hostname.endsWith('.animelook.com')) {
           window.location.href = url;
         } else {
-          // Ctrl tuşuna basılıysa veya sosyal medya linki ise dış tarayıcıda aç
+        
           if (e.ctrlKey || 
               urlObj.hostname.includes('instagram.com') || 
               urlObj.hostname.includes('twitter.com') || 
@@ -232,22 +237,21 @@ reloadButton.addEventListener('click', () => {
   webview.reload();
 });
 
-// Önbellek temizleme butonu işlevselliği
+
 clearCacheButton.addEventListener('click', async () => {
   if (confirm('Önbellek temizlenecek. Bu işlem uygulamanın performansını geçici olarak etkileyebilir. Devam etmek istiyor musunuz?')) {
     try {
-      // Önbellek temizleme işlemi başladığında yükleme ekranını göster
+      
       toggleLoadingScreen(true);
       
-      // Main process'teki önbellek temizleme fonksiyonunu çağır
       const result = await window.electronAPI.clearCache();
       
-      // Yükleme ekranını gizle
+      
       toggleLoadingScreen(false);
       
       if (result.success) {
         alert(`Önbellek başarıyla temizlendi. ${result.deletedFiles} dosya silindi.`);
-        // Sayfayı yenile
+       
         webview.reload();
       } else {
         alert('Önbellek temizlenirken bir hata oluştu: ' + (result.error || 'Bilinmeyen hata'));
@@ -273,23 +277,20 @@ pipButton.addEventListener('click', async () => {
       videoUrl = await window.electronAPI.getCurrentUrl();
     }
     
-    // Ana sayfadaki videoyu durdur - Geliştirilmiş yöntem
+   
     if (videoInfo.videoElement === 'video') {
       await webview.executeJavaScript(`
         (function() {
           const videos = document.querySelectorAll('video');
           if (videos.length > 0) {
-            // Video oynatma durumunu kaydet
+            
             const isPlaying = !!(videos[0].currentTime > 0 && !videos[0].paused && !videos[0].ended && videos[0].readyState > 2);
             console.log('Video durduruluyor. Oynatma durumu:', isPlaying, 'Konum:', videos[0].currentTime);
             
-            // Önce videoyu tıklayarak durdurma deneyelim
+            
             try {
-              // Video elementine tıklama
               videos[0].click();
               console.log('Video tıklandı');
-              
-              // Kısa bir bekleme sonrası pause() metodunu da çağıralım
               setTimeout(() => {
                 if (!videos[0].paused) {
                   videos[0].pause();
@@ -298,7 +299,6 @@ pipButton.addEventListener('click', async () => {
               }, 100);
             } catch (e) {
               console.error('Video tıklama hatası:', e);
-              // Hata durumunda yedek yöntem
               if (!videos[0].paused) {
                 videos[0].pause();
               }
@@ -310,7 +310,6 @@ pipButton.addEventListener('click', async () => {
       `);
     }
 
-    // PIP penceresine video bilgilerini gönder
     window.electronAPI.togglePictureInPicture(
       videoUrl, 
       videoInfo.hasVideo, 
@@ -582,12 +581,121 @@ webview.addEventListener('dom-ready', () => {
 
 webview.addEventListener('did-navigate', () => {
   updateNavigationButtons();
+  const currentUrl = webview.getURL();
+  window.electronAPI.updateCurrentUrl(currentUrl);
+  
+  analyzeUrlAndUpdateDiscordRPC(currentUrl);
 });
 
 webview.addEventListener('did-navigate-in-page', () => {
   updateNavigationButtons();
+  const currentUrl = webview.getURL();
+  window.electronAPI.updateCurrentUrl(currentUrl);
+  
+  analyzeUrlAndUpdateDiscordRPC(currentUrl);
 });
 
+
+async function analyzeUrlAndUpdateDiscordRPC(url) {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const searchParams = urlObj.searchParams;
+    const pageTitle = await webview.executeJavaScript('document.title');
+    
+    if (pathname === '/' && !searchParams.has('s')) {
+      window.electronAPI.setDiscordBrowsing('Ana Sayfa');
+      return;
+    }
+    
+    if (pathname === '/' && searchParams.has('s')) {
+      const searchQuery = searchParams.get('s');
+      window.electronAPI.setDiscordSearching();
+      webview.executeJavaScript(`
+        (function() {
+          return {
+            searchQuery: "${searchQuery.replace(/"/g, '\\"')}",
+            resultCount: document.querySelectorAll('.anime-card, .search-result').length || 'bilinmiyor'
+          };
+        })()
+      `).then(result => {
+        if (result) {
+          console.log('Arama sonuçları:', result);
+        }
+      }).catch(err => console.error('Arama bilgisi alınamadı:', err));
+      return;
+    }
+    
+    if (pathname.startsWith('/anime/')) {
+      const animeSlug = pathname.split('/').filter(Boolean)[1]; 
+      
+      webview.executeJavaScript(`
+        (function() {
+          const animeTitle = document.querySelector('.anime-title, h1')?.textContent || document.title;
+          const animeInfo = document.querySelector('.anime-info, .anime-description')?.textContent || 'Anime detayları';
+          return { animeTitle, animeInfo };
+        })()
+      `).then(result => {
+        if (result) {
+          window.electronAPI.setDiscordBrowsing(`${result.animeTitle} hakkında bilgi alıyor`);
+        }
+      }).catch(err => console.error('Anime detay bilgisi alınamadı:', err));
+      return;
+    }
+    
+    const isWatchPage = pathname.includes('-izle/') || pathname.includes('/watch/') || pathname.includes('/bolum-');
+    
+    if (isWatchPage) {
+      
+      if (pageTitle) {
+
+        let watchInfo = pageTitle;
+
+        if (watchInfo.includes('|')) {
+          watchInfo = watchInfo.split('|')[0].trim();
+        }
+
+        if (watchInfo.includes('izle')) {
+          watchInfo = watchInfo.replace('izle', 'izliyor').trim();
+        } else {
+          watchInfo = watchInfo + ' izliyor';
+        }
+        
+        if (watchInfo.length > 128) {
+          watchInfo = watchInfo.substring(0, 125) + '...';
+        }
+        
+        console.log('Discord RPC için hazırlanan bilgi:', watchInfo);
+        window.electronAPI.setDiscordWatching({ animeTitle: watchInfo });
+        return;
+      }
+      
+      const pathParts = pathname.split('/');
+      if (pathParts.length > 1) {
+        const animePart = pathParts[1].replace(/-/g, ' ');
+        let animeTitle = animePart.charAt(0).toUpperCase() + animePart.slice(1);
+        
+        if (animeTitle.length > 50) {
+          animeTitle = animeTitle.substring(0, 47) + '...';
+        }
+        
+        console.log('Discord RPC için URL\'den hazırlanan bilgi:', animeTitle + ' izliyor');
+        window.electronAPI.setDiscordWatching({ animeTitle: animeTitle + ' izliyor' });
+      } else {
+        window.electronAPI.setDiscordWatching({ animeTitle: 'Anime izliyor' });
+      }
+      return;
+    }
+    
+    window.electronAPI.setDiscordBrowsing(pageTitle);
+    
+  } catch (error) {
+    console.error('Discord RPC güncellenirken hata oluştu:', error);
+    webview.executeJavaScript('document.title').then(title => {
+      window.electronAPI.setDiscordBrowsing(title);
+    });
+  }
+}
 
 function checkForFullscreenVideo() {
 
@@ -657,8 +765,6 @@ function resetVideoPlayerControls() {
   });
 }
 
-
-// Add these variables at the top with other declarations
 const updateButton = document.getElementById('update-button');
 const updateNotification = document.getElementById('update-notification');
 const closeUpdateModal = document.getElementById('close-update-modal');
@@ -674,7 +780,6 @@ const installUpdateButton = document.getElementById('install-update-button');
 
 let hasUpdate = false;
 
-// Add these functions to handle updates
 function toggleUpdateNotification(show) {
   if (show) {
     updateNotification.classList.add('visible');
@@ -690,7 +795,7 @@ function handleUpdateStatus(status) {
     updateMessage.textContent = status.message;
   }
   
-  // Handle download progress
+
   if (status.data && status.data.percent !== undefined) {
     updateProgress.style.display = 'block';
     const percent = Math.round(status.data.percent);
@@ -698,7 +803,7 @@ function handleUpdateStatus(status) {
     progressText.textContent = `${percent}%`;
   }
   
-  // Show install button when download is complete
+
   if (status.message === 'Güncelleme indirildi') {
     downloadUpdateButton.style.display = 'none';
     installUpdateButton.style.display = 'inline-block';
@@ -709,7 +814,7 @@ function handleUpdateAvailable(info) {
   hasUpdate = true;
   updateButton.style.display = 'flex';
   
-  // Update notification content
+
   updateVersion.textContent = `Sürüm: ${info.version}`;
   if (info.releaseNotes) {
     updateNotes.innerHTML = `<strong>Değişiklikler:</strong><br>${formatReleaseNotes(info.releaseNotes)}`;
@@ -717,14 +822,12 @@ function handleUpdateAvailable(info) {
     updateNotes.textContent = '';
   }
   
-  // Show download button
   downloadUpdateButton.style.display = 'inline-block';
 }
 
 function formatReleaseNotes(notes) {
   if (!notes) return '';
   
-  // Convert markdown to simple HTML
   return notes
     .replace(/\r\n/g, '\n')
     .replace(/\n\n/g, '<br><br>')
@@ -736,7 +839,6 @@ function formatReleaseNotes(notes) {
     .replace(/# (.*?)\n/g, '<h1>$1</h1>');
 }
 
-// Add these event listeners
 updateButton.addEventListener('click', () => {
   toggleUpdateNotification(true);
 });
@@ -761,11 +863,9 @@ installUpdateButton.addEventListener('click', () => {
   window.electronAPI.installUpdate();
 });
 
-// Add these event listeners for update-related events
 window.electronAPI.onUpdateStatus(handleUpdateStatus);
 window.electronAPI.onUpdateAvailable(handleUpdateAvailable);
 
-// Add this to the existing modal click handler
 updateNotification.addEventListener('click', (event) => {
   if (event.target === updateNotification) {
     toggleUpdateNotification(false);

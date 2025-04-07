@@ -6,39 +6,36 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
-// GitHub repository information
-// Update these lines in your updater.js file
 const GITHUB_OWNER = 'averoswastaken';
 const GITHUB_REPO = 'AnimeLook-Desktop';
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 
-// Update states
+
 let updateAvailable = false;
 let updateDownloaded = false;
 let updateInfo = null;
 let mainWindow = null;
 
-// Configure logging
+
 autoUpdater.logger = require('electron-log');
 autoUpdater.logger.transports.file.level = 'info';
 
-// Force updates in development mode
+
 autoUpdater.forceDevUpdateConfig = true;
 
-// Initialize updater
-// Add these variables at the top
+
 let splashWindow = null;
 let isStartupCheck = true;
 
-// Update the initUpdater function
+
 function initUpdater(window, splash) {
   mainWindow = window;
   splashWindow = splash;
   
-  // Check for updates on app start
+
   setTimeout(checkForUpdates, 1000);
   
-  // Set up event handlers
+
   autoUpdater.on('checking-for-update', () => {
     sendStatusToWindow('Güncellemeler kontrol ediliyor...');
     sendStatusToSplash('Güncellemeler kontrol ediliyor...', false);
@@ -109,7 +106,6 @@ function initUpdater(window, splash) {
   });
 }
 
-// Add this function to send status to splash screen
 function sendStatusToSplash(message, isUpdating, progress) {
     if (splashWindow && !splashWindow.isDestroyed()) {
       splashWindow.webContents.send('splash-update-status', {
@@ -120,10 +116,8 @@ function sendStatusToSplash(message, isUpdating, progress) {
     }
   }
 
-// Check for updates using GitHub API
 async function checkForUpdates() {
   try {
-    // First try with electron-updater
     autoUpdater.checkForUpdates().catch(err => {
       console.log('electron-updater ile kontrol başarısız, GitHub API kullanılıyor:', err);
       checkForUpdatesManually();
@@ -134,7 +128,6 @@ async function checkForUpdates() {
   }
 }
 
-// Manual update check using GitHub API
 async function checkForUpdatesManually() {
   try {
     const response = await axios.get(GITHUB_API_URL);
@@ -162,10 +155,8 @@ async function checkForUpdatesManually() {
   }
 }
 
-// Get download URL for the appropriate asset
 function getAssetDownloadUrl(release) {
   const assets = release.assets;
-  // Look for Windows installer (.exe)
   const windowsAsset = assets.find(asset => 
     asset.name.endsWith('.exe') && 
     asset.name.includes('setup') && 
@@ -175,7 +166,6 @@ function getAssetDownloadUrl(release) {
   return windowsAsset ? windowsAsset.browser_download_url : null;
 }
 
-// Send update status to renderer process
 function sendStatusToWindow(message, data = null) {
   if (mainWindow) {
     mainWindow.webContents.send('update-status', { message, data });
@@ -183,14 +173,12 @@ function sendStatusToWindow(message, data = null) {
   console.log(message, data);
 }
 
-// Show notification about available update
 function showUpdateNotification(info) {
   if (!mainWindow) return;
   
   mainWindow.webContents.send('update-available', info);
 }
 
-// Show notification that update is downloaded and ready
 function showUpdateDownloadedNotification(info) {
   if (!mainWindow) return;
   
@@ -208,7 +196,6 @@ function showUpdateDownloadedNotification(info) {
   });
 }
 
-// Install the update
 function installUpdate() {
   if (updateDownloaded) {
     autoUpdater.quitAndInstall(false, true);
@@ -217,20 +204,15 @@ function installUpdate() {
   }
 }
 
-// Manual download and install for GitHub releases
 async function downloadAndInstallManually(downloadUrl) {
   try {
     sendStatusToWindow('Güncelleme indiriliyor...');
     
-    // Check if URL is valid
     if (!downloadUrl) {
       throw new Error('Geçerli indirme URL\'si bulunamadı');
     }
-    
-    // Log the URL we're trying to download from
     console.log('Trying to download from:', downloadUrl);
-    
-    // Try to get the release directly from GitHub API as fallback
+
     if (downloadUrl.includes('github.com') && downloadUrl.includes('404')) {
       console.log('GitHub 404 error, trying alternative download method...');
       try {
@@ -254,13 +236,12 @@ async function downloadAndInstallManually(downloadUrl) {
     
     const installerPath = path.join(tempDir, 'AnimeLook-Setup.exe');
     
-    // Download the file with better error handling
     try {
       const response = await axios({
         method: 'GET',
         url: downloadUrl,
         responseType: 'stream',
-        timeout: 30000, // 30 second timeout
+        timeout: 30000, 
         validateStatus: status => status === 200
       });
       
@@ -270,7 +251,6 @@ async function downloadAndInstallManually(downloadUrl) {
       writer.on('finish', () => {
         sendStatusToWindow('Güncelleme indirildi, kurulum başlatılıyor...');
         
-        // Run the installer
         const installer = spawn(installerPath, ['--updated'], {
           detached: true,
           stdio: 'ignore'
@@ -278,7 +258,6 @@ async function downloadAndInstallManually(downloadUrl) {
         
         installer.unref();
         
-        // Quit the app after a short delay
         setTimeout(() => {
           app.exit(0);
         }, 1000);
@@ -291,8 +270,7 @@ async function downloadAndInstallManually(downloadUrl) {
     } catch (downloadError) {
       console.error('Download request failed:', downloadError);
       sendStatusToWindow('İndirme başarısız', downloadError);
-      
-      // Notify user about manual download option
+
       if (mainWindow) {
         dialog.showMessageBox(mainWindow, {
           type: 'info',
@@ -314,12 +292,10 @@ async function downloadAndInstallManually(downloadUrl) {
   }
 }
 
-// Check if update is available
 function isUpdateAvailable() {
   return updateAvailable;
 }
 
-// Download update manually
 function downloadUpdate() {
   if (updateAvailable && !updateDownloaded) {
     if (autoUpdater.autoDownload === false) {
@@ -330,7 +306,6 @@ function downloadUpdate() {
   }
 }
 
-// Export the updated functions
 module.exports = {
   initUpdater,
   checkForUpdates,

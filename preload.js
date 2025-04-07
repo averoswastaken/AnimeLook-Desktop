@@ -1,7 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-
-// Add these to the electronAPI object
 contextBridge.exposeInMainWorld('electronAPI', {
 
   windowControl: (action) => ipcRenderer.send('window-control', action),
@@ -31,19 +29,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closePipWindow: () => ipcRenderer.send('close-pip-window'),
   onPipError: (callback) => ipcRenderer.on('pip-error', (_, errorMessage) => callback(errorMessage)),
   
-  // Update related functions
+
   checkForUpdates: () => ipcRenderer.send('check-for-updates'),
   downloadUpdate: () => ipcRenderer.send('download-update'),
   installUpdate: () => ipcRenderer.send('install-update'),
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (_, status) => callback(status)),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_, info) => callback(info)),
   
-  // Get app version
+
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   
-  // Cache clearing function
+
   clearCache: () => ipcRenderer.invoke('clear-cache'),
   onCacheCleared: (callback) => ipcRenderer.on('cache-cleared', (_, result) => callback(result)),
+  
+
+  setDiscordWatching: (data) => ipcRenderer.send('discord-set-watching', data),
+  setDiscordSearching: () => ipcRenderer.send('discord-set-searching'),
+  setDiscordBrowsing: (pageTitle) => ipcRenderer.send('discord-set-browsing', pageTitle),
 });
 
 
@@ -75,27 +78,27 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const script = document.createElement('script');
   script.textContent = `
-    // Improve window.open handling
+   
     const originalWindowOpen = window.open;
     
     window.open = function(url, target, features) {
       if (url) {
-        // Check if it's an internal link (same domain)
+       
         const currentDomain = window.location.hostname;
         const urlObj = new URL(url, window.location.href);
         
         if (urlObj.hostname === currentDomain || urlObj.hostname === 'animelook.com' || urlObj.hostname.endsWith('.animelook.com')) {
-          // Internal link - open in the same window
+         
           window.location.href = url;
           return null;
         } else {
-          // Ctrl tuşuna basılıysa veya target="_blank" ise dış tarayıcıda aç
+       
           if (window.event && window.event.ctrlKey) {
             window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
             return null;
           }
           
-          // Instagram, Twitter gibi sosyal medya linkleri için dış tarayıcıda aç
+       
           if (urlObj.hostname.includes('instagram.com') || 
               urlObj.hostname.includes('twitter.com') || 
               urlObj.hostname.includes('facebook.com') {
@@ -103,7 +106,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return null;
           }
           
-          // Diğer linkleri aynı pencerede aç
+        
           window.location.href = url;
           return null;
         }
@@ -117,7 +120,7 @@ window.addEventListener('DOMContentLoaded', () => {
       };
     };
     
-    // Tüm _blank hedefli linkleri yakalayıp düzgün açılmasını sağla
+    
     document.addEventListener('click', function(e) {
       const link = e.target.closest('a');
       if (link && link.target === '_blank') {
@@ -126,7 +129,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }, true);
     
-    // Handle link clicks directly
+   
     document.addEventListener('click', (e) => {
       const link = e.target.closest('a');
       if (link && link.href) {
@@ -134,7 +137,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const currentDomain = window.location.hostname;
         const urlObj = new URL(url, window.location.href);
         
-        // Check if it's an external link and not modified by keyboard
+        
         if ((urlObj.hostname !== currentDomain && 
              urlObj.hostname !== 'animelook.com' && 
              !urlObj.hostname.endsWith('.animelook.com')) && 

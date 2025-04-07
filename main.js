@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
 const updater = require('./updater');
+const discordRPC = require('./discord-rpc');
 
 
 const store = new Store({
@@ -22,7 +23,6 @@ let isQuitting = false;
 let currentUrl = "https://animelook.net/";
 let splashWindow = null;
 
-// Set auto launch settings
 const setAutoLaunch = (enabled) => {
   app.setLoginItemSettings({
     openAtLogin: enabled,
@@ -30,7 +30,6 @@ const setAutoLaunch = (enabled) => {
   });
 };
 
-// Apply performance settings based on mode
 function applyPerformanceSettings(mode) {
   if (!mainWindow) return;
   
@@ -52,7 +51,7 @@ function applyPerformanceSettings(mode) {
   }
 }
 
-// Create the splash window
+
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 400,
@@ -80,7 +79,7 @@ function createSplashWindow() {
   });
 }
 
-// Create the main application window
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -92,33 +91,30 @@ function createWindow() {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
       partition: 'persist:animelook',
-      // Çerezleri ve oturum bilgilerini kaydetmek için
       cache: true,
       persistentCookies: true
     },
     frame: false, 
     backgroundColor: '#2e2c29',
-    show: false // Don't show immediately
+    show: false 
   });
 
   mainWindow.loadFile('index.html');
   
-  // Set up event listeners for the main window
+  
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    // Eğer animelook.net domain'ine aitse aynı pencerede aç
+
     if (url.includes('animelook.net')) {
       return { action: 'allow' };
     }
-    // Diğer linkleri dış tarayıcıda aç
+
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
-  // Start in maximized mode (pencereli tam ekran)
+
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize();
-    // Gerçek tam ekran modunu kaldırdık, sadece maximize edilmiş pencere kullanıyoruz
-    // mainWindow.setFullScreen(true);
   });
 
   mainWindow.webContents.on('did-start-loading', () => {
@@ -181,7 +177,6 @@ function createWindow() {
   });
 }
 
-// Create the PiP window
 function createPipWindow(url, videoElement, currentTime, videoId) {
   const { width: screenWidth, height: screenHeight } = require('electron').screen.getPrimaryDisplay().workAreaSize;
   
@@ -321,7 +316,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
             const allMediaElements = document.querySelectorAll(mediaSelectors.join(', '));
             let videoFound = false;
             
-            // Önce video elementlerini kontrol et
+
             for (let i = 0; i < allMediaElements.length; i++) {
               const element = allMediaElements[i];
               
@@ -330,14 +325,14 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                 element.scrollIntoView({behavior: 'smooth', block: 'center'});
                 console.log('PiP: Video elementi bulundu ve odaklandı');
                 
-                // Video hazır olduğunda belirtilen konumdan başlat
+            
                 const startVideo = () => {
                   const timeToSet = ${currentTime || 0};
                   if (timeToSet > 0) {
                     console.log('PiP: Video kaldığı yerden başlatılıyor:', timeToSet);
                     element.currentTime = timeToSet;
                     
-                    // Video oynatmayı birkaç kez dene
+                 
                     const attemptPlay = (attempts = 0) => {
                       if (attempts > 5) return;
                       
@@ -345,7 +340,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                         console.log('PiP: Video başarıyla başlatıldı');
                       }).catch(e => {
                         console.error('PiP: Video oynatma hatası:', e);
-                        // Yeniden deneme
+                        
                         setTimeout(() => attemptPlay(attempts + 1), 500);
                       });
                     };
@@ -359,7 +354,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                 } else {
                   element.addEventListener('loadeddata', startVideo, { once: true });
                   element.addEventListener('canplay', startVideo, { once: true });
-                  // Ek olarak bir timeout ile de kontrol et
+                 
                   setTimeout(startVideo, 1000);
                 }
                 
@@ -367,7 +362,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
               }
             }
             
-            // Video bulunamadıysa iframe'leri kontrol et
+      
             if (!videoFound && allMediaElements.length > 0) {
               for (let i = 0; i < allMediaElements.length; i++) {
                 const element = allMediaElements[i];
@@ -376,12 +371,12 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                   element.scrollIntoView({behavior: 'smooth', block: 'center'});
                   console.log('PiP: Iframe elementi bulundu ve odaklandı');
                   
-                  // iframe'i görünür yap
+            
                   element.style.display = 'block';
                   element.style.visibility = 'visible';
                   element.style.opacity = '1';
                   
-                  // Üst elementleri de görünür yap
+               
                   let parent = element.parentElement;
                   while (parent) {
                     const style = window.getComputedStyle(parent);
@@ -430,7 +425,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
               const allMediaElements = document.querySelectorAll(mediaSelectors.join(', '));
               let videoFound = false;
               
-              // Önce video elementlerini kontrol et
+              
               for (let i = 0; i < allMediaElements.length; i++) {
                 const element = allMediaElements[i];
                 
@@ -439,12 +434,11 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                   element.scrollIntoView({behavior: 'smooth', block: 'center'});
                   console.log('PiP: DOM değişikliği sonrası video elementi bulundu');
                   
-                  // Video hazır olduğunda belirtilen konumdan başlat
+                  
                   if (videoStartTime > 0) {
                     console.log('PiP: DOM değişikliği sonrası video kaldığı yerden başlatılıyor:', videoStartTime);
                     element.currentTime = videoStartTime;
-                    
-                    // Video oynatmayı birkaç kez dene
+                
                     const attemptPlay = (attempts = 0) => {
                       if (attempts > 5) return;
                       
@@ -452,7 +446,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                         console.log('PiP: Video başarıyla başlatıldı');
                       }).catch(e => {
                         console.error('PiP: Video oynatma hatası:', e);
-                        // Yeniden deneme
+                       
                         setTimeout(() => attemptPlay(attempts + 1), 500);
                       });
                     };
@@ -464,7 +458,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                 }
               }
               
-              // Video bulunamadıysa iframe'leri kontrol et
+           
               if (!videoFound && allMediaElements.length > 0) {
                 for (let i = 0; i < allMediaElements.length; i++) {
                   const element = allMediaElements[i];
@@ -473,12 +467,12 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
                     element.scrollIntoView({behavior: 'smooth', block: 'center'});
                     console.log('PiP: DOM değişikliği sonrası iframe elementi bulundu');
                     
-                    // iframe'i görünür yap
+                 
                     element.style.display = 'block';
                     element.style.visibility = 'visible';
                     element.style.opacity = '1';
                     
-                    // Üst elementleri de görünür yap
+                 
                     let parent = element.parentElement;
                     while (parent) {
                       const style = window.getComputedStyle(parent);
@@ -552,7 +546,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
   });
 }
 
-// Close the PiP window
+
 function closePipWindow() {
   if (pipWindow) {
     pipWindow.close();
@@ -566,7 +560,7 @@ function closePipWindow() {
   }
 }
 
-// Create the system tray
+
 function createTray() {
   tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
   const contextMenu = Menu.buildFromTemplate([
@@ -604,21 +598,19 @@ function createTray() {
   });
 }
 
-// Önbellek temizleme fonksiyonu
+
 function clearAppCache() {
   return new Promise((resolve, reject) => {
     try {
-      // Uygulama verilerinin saklandığı dizin
       const userDataPath = app.getPath('userData');
       
-      // Önbellek dizinleri (partition: persist:animelook için)
       const cachePaths = [
         path.join(userDataPath, 'Cache'),
         path.join(userDataPath, 'Code Cache'),
         path.join(userDataPath, 'GPUCache')
       ];
       
-      // Kritik olmayan önbellek dosyalarını temizle
+
       let deletedFiles = 0;
       let errors = 0;
       
@@ -627,7 +619,6 @@ function clearAppCache() {
           try {
             const files = fs.readdirSync(cachePath);
             files.forEach(file => {
-              // Kritik dosyaları atla (index dosyaları, veritabanı dosyaları vb.)
               if (!file.includes('index') && !file.includes('.db') && !file.includes('MANIFEST')) {
                 try {
                   fs.unlinkSync(path.join(cachePath, file));
@@ -654,7 +645,7 @@ function clearAppCache() {
   });
 }
 
-// Set up IPC communication
+
 function setupIPC() {
   ipcMain.on('toggle-mini-mode', (event, isActive) => {
     if (!mainWindow) return;
@@ -682,7 +673,6 @@ function setupIPC() {
       const pipUrl = url || currentUrl;
       console.log('PiP modu başlatılıyor, URL:', pipUrl, 'Video konumu:', currentTime);
       
-      // Ana penceredeki videoyu durdur - Geliştirilmiş yöntem
       if (mainWindow) {
         mainWindow.webContents.executeJavaScript(`
           (function() {
@@ -693,11 +683,11 @@ function setupIPC() {
                 "  const videos = document.querySelectorAll('video');\n" +
                 "  if (videos.length > 0) {\n" +
                 "    console.log('Ana penceredeki video durduruluyor...');\n" +
-                "    // Önce videoyu tıklayarak durdurma deneyelim\n" +
+                "    \n" +
                 "    try {\n" +
                 "      videos[0].click();\n" +
                 "      console.log('Video tıklandı');\n" +
-                "      // Kısa bir bekleme sonrası pause() metodunu da çağıralım\n" +
+                "      \n" +
                 "      setTimeout(() => {\n" +
                 "        if (!videos[0].paused) {\n" +
                 "          videos[0].pause();\n" +
@@ -707,7 +697,7 @@ function setupIPC() {
                 "    } catch (e) {\n" +
                 "      console.error('Video tıklama hatası:', e);\n" +
                 "    }\n" +
-                "    // Yedek yöntem olarak doğrudan pause() metodunu çağıralım\n" +
+                "     \n" +
                 "    videos.forEach(video => {\n" +
                 "      if (!video.paused) {\n" +
                 "        video.pause();\n" +
@@ -816,12 +806,11 @@ function setupIPC() {
     };
   });
   
-  // Add handler for app version
+
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
   });
   
-  // Önbellek temizleme handler'ı
   ipcMain.handle('clear-cache', async () => {
     try {
       const result = await clearAppCache();
@@ -832,7 +821,6 @@ function setupIPC() {
     }
   });
 
-  // Add these new IPC handlers for updates
   ipcMain.on('check-for-updates', () => {
     updater.checkForUpdates();
   });
@@ -851,10 +839,8 @@ function setupIPC() {
       splashWindow = null;
     }
     
-    // Ana pencere henüz oluşturulmadıysa oluştur
     if (!mainWindow) {
       createWindow();
-      // Ana pencere oluşturulduktan sonra updater'ı güncelle
       updater.initUpdater(mainWindow, null);
     } else {
       mainWindow.show();
@@ -863,16 +849,13 @@ function setupIPC() {
   });
 }
 
-// Tek instance çalışmasını sağla
+
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
-  // Eğer başka bir instance zaten çalışıyorsa, bu instance'ı kapat
   app.quit();
 } else {
-  // İkinci bir instance başlatılmaya çalışıldığında
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Eğer ana pencere varsa, minimize edilmişse restore et ve focus ver
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       if (!mainWindow.isVisible()) mainWindow.show();
@@ -880,31 +863,21 @@ if (!gotTheLock) {
     }
   });
 
-  // App initialization
+ 
   app.whenReady().then(() => {
-    // Set up IPC handlers first
     setupIPC();
-    
-    // Create splash window first
     createSplashWindow();
-    
-    // Create system tray
     createTray();
-    
-    // Initialize updater with splash window only initially
+    discordRPC.init();
     updater.initUpdater(null, splashWindow);
-    
-    // Apply settings
     setAutoLaunch(store.get('startAtBoot'));
     applyPerformanceSettings(store.get('performanceMode'));
-    
-    // Main window will be created after splash screen checks are complete
-    // This is handled by the 'show-main-window' IPC event
   });
 }
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    discordRPC.destroy();
     app.quit();
   }
 });
