@@ -1,7 +1,7 @@
 {
   "name": "animelook-desktop",
-  "version": "2.6.0",
-  "description": "AnimeLook.com için masaüstü uygulaması",
+  "version": "2.6.1",
+  "description": "AnimeLook için masaüstü uygulaması",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -9,10 +9,10 @@
     "publish": "electron-builder --win --publish always"
   },
   "author": "AnimeLook",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "dotenv-cli": "^7.3.0",
-    "electron": "^28.1.0",
+    "electron": "^28.3.3",
     "electron-builder": "^24.9.1"
   },
   "dependencies": {

@@ -1,21 +1,29 @@
-MIT License
+# AnimeLook Özel Lisansı (AnimeLook Custom License)
 
-Copyright (c) 2024 AnimeLook
+**Telif Hakkı (c) 2025 AnimeLook**
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Bu yazılım, kişisel veya topluluk temelli projelerde serbestçe kullanılabilir, geliştirilebilir ve dağıtılabilir.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Ancak aşağıdaki koşullar geçerlidir:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+- Yazılımın orijinal adı **AnimeLook** korunmalıdır. Adın değiştirilmesi veya yazılımın başka bir isim altında sunulması yasaktır.
+- Yazılımın kendisi ya da türev çalışmaları **ticari olarak satılamaz, kiralanamaz, lisanslanamaz veya gelir elde etme amacıyla kullanılamaz.**
+- Yazılımın dağıtımı sırasında, bu lisans metni ve telif hakkı bildirimi mutlaka korunmalıdır.
+
+Yazılım "OLDUĞU GİBİ" sunulmakta olup, hiçbir garanti verilmemektedir.
+
+---
+
+## English Version
+
+**Copyright (c) 2025 AnimeLook**
+
+This software may be freely used, developed, and distributed for personal or community-based projects.
+
+However, the following conditions apply:
+
+- The original name **AnimeLook** must be retained. Renaming the software or distributing it under another name is prohibited.
+- The software or any derivative works may **not be sold, licensed, rented, or used for commercial gain.**
+- This license notice and copyright statement must be included in all copies or substantial portions of the software.
+
+The software is provided "AS IS", without warranty of any kind.

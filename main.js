@@ -220,7 +220,6 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
         height: 100vh;
       }
       
-      /* PiP Üst Bar */
       #pip-titlebar {
         height: 28px;
         background-color: #1a1a1a;
@@ -260,7 +259,6 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
         color: #fff;
       }
       
-      /* Webview */
       #pip-content {
         flex: 1;
         overflow: hidden;

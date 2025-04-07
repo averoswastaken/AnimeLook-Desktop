@@ -1,12 +1,11 @@
 # AnimeLook Desktop App
 
-A desktop application for AnimeLook.com that provides a seamless anime watching experience on Windows.
+A desktop application for AnimeLook that provides a seamless anime watching experience on Windows.
 
 ## Features
 
-- Lightweight desktop wrapper for AnimeLook.com
+- Lightweight desktop wrapper for AnimeLook
 - Picture-in-Picture (PiP) mode for watching while multitasking
-- Mini mode for a compact viewing experience
 - Automatic updates via GitHub releases
 - System tray integration
 - Performance optimization settings
@@ -29,3 +28,9 @@ Download the latest version from the [Releases](https://github.com/averoswastake
 ```bash
 git clone https://github.com/averoswastaken/AnimeLook-Desktop.git
 cd AnimeLook-Desktop
+npm i
+npm start .
+
+## Lisans
+
+Bu proje [AnimeLook Özel Lisansı](LICENSE) ile lisanslanmıştır.
