@@ -30,7 +30,7 @@ git clone https://github.com/averoswastaken/AnimeLook-Desktop.git
 cd AnimeLook-Desktop
 npm i
 npm start .
-
+```
 ## Lisans
 
 Bu proje [AnimeLook Özel Lisansı](LICENSE) ile lisanslanmıştır.
