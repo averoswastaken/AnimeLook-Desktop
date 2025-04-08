@@ -24,7 +24,7 @@ async function initRPC() {
       setActivity(currentActivity);
     } else {
       setActivity({
-        details: 'AnimeLookta geziniyor',
+        details: 'AnimeLook\'ta geziniyor',
         state: 'Ana Sayfa',
         largeImageKey: 'animelook_logo',
         largeImageText: 'AnimeLook',

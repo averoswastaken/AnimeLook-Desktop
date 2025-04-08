@@ -164,24 +164,77 @@ webview.addEventListener('did-finish-load', () => {
         const url = link.getAttribute('href');
         const urlObj = new URL(url, window.location.href);
         
-       
-        if (urlObj.hostname === 'animelook.com' || urlObj.hostname.endsWith('.animelook.com')) {
+        if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
           window.location.href = url;
         } else {
-        
-          if (e.ctrlKey || 
-              urlObj.hostname.includes('instagram.com') || 
-              urlObj.hostname.includes('twitter.com') || 
-              urlObj.hostname.includes('facebook.com') {
-            window.open(url, '_blank');
-          } else {
-            window.location.href = url;
-          }
+          window.postMessage({ type: 'open-external-url', url: url }, '*');
         }
       });
     });
+    
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link && link.href && !link.hasAttribute('data-processed')) {
+        link.setAttribute('data-processed', 'true');
+        
+        const url = link.href;
+        const urlObj = new URL(url, window.location.href);
+        
+        if (urlObj.hostname !== 'animelook.net' && !urlObj.hostname.endsWith('.animelook.net')) {
+          e.preventDefault();
+          window.postMessage({ type: 'open-external-url', url: url }, '*');
+        }
+      }
+    }, true);
   `);
   
+  webview.insertCSS(`
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(33, 150, 243, 0.5);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(33, 150, 243, 0.8);
+    }
+    
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+    
+    iframe::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    iframe::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    iframe::-webkit-scrollbar-thumb {
+      background: rgba(33, 150, 243, 0.5);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    iframe::-webkit-scrollbar-thumb:hover {
+      background: rgba(33, 150, 243, 0.8);
+    }
+    
+    iframe::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+  `);
 
   webview.addEventListener('ipc-message', (event) => {
     if (event.channel === 'video-fullscreen-change') {
@@ -193,6 +246,66 @@ webview.addEventListener('did-finish-load', () => {
       }
     }
   });
+});
+
+miniWebview.addEventListener('did-finish-load', () => {
+  miniWebview.executeJavaScript(`
+    document.addEventListener('fullscreenchange', () => {
+      window.postMessage({ type: 'video-fullscreen-change', isFullscreen: !!document.fullscreenElement }, '*');
+    });
+    
+    document.addEventListener('webkitfullscreenchange', () => {
+      window.postMessage({ type: 'video-fullscreen-change', isFullscreen: !!document.webkitFullscreenElement }, '*');
+    });
+  `);
+  
+  miniWebview.insertCSS(`
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(33, 150, 243, 0.5);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(33, 150, 243, 0.8);
+    }
+    
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+    
+    iframe::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    
+    iframe::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    iframe::-webkit-scrollbar-thumb {
+      background: rgba(33, 150, 243, 0.5);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    iframe::-webkit-scrollbar-thumb:hover {
+      background: rgba(33, 150, 243, 0.8);
+    }
+    
+    iframe::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+  `);
 });
 
 

@@ -273,7 +273,7 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
   </head>
   <body>
     <div id="pip-titlebar">
-      <div class="pip-title">AnimeLook Video</div>
+      <div class="pip-title">AnimeLook</div>
       <button id="pip-close-button" class="pip-close-button">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -563,7 +563,7 @@ function createTray() {
   tray = new Tray(path.join(__dirname, 'assets/icon.ico'));
   const contextMenu = Menu.buildFromTemplate([
     { 
-      label: 'AnimeLooku Aç', 
+      label: 'Uygulamayı Aç', 
       click: () => { mainWindow.show(); }
     },
     { 
@@ -737,7 +737,17 @@ function setupIPC() {
   });
   
   ipcMain.on('open-external-url', (event, url) => {
-    shell.openExternal(url);
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
+        console.log('Harici URL açılıyor:', url);
+        shell.openExternal(url);
+      } else {
+        console.warn('Güvensiz protokol:', urlObj.protocol);
+      }
+    } catch (error) {
+      console.error('Geçersiz URL:', url, error);
+    }
   });
 
   ipcMain.on('window-control', (event, action) => {

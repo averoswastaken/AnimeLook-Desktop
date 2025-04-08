@@ -54,23 +54,27 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const style = document.createElement('style');
   style.textContent = `
-    /* Özel scrollbar */
     ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
+      width: 6px;
+      height: 6px;
     }
     
     ::-webkit-scrollbar-track {
-      background: #2e2c29;
+      background: transparent;
     }
     
     ::-webkit-scrollbar-thumb {
-      background: #2196F3;
-      border-radius: 5px;
+      background: rgba(33, 150, 243, 0.5);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     ::-webkit-scrollbar-thumb:hover {
-      background: #1976D2;
+      background: rgba(33, 150, 243, 0.8);
+    }
+    
+    ::-webkit-scrollbar-corner {
+      background: transparent;
     }
   `;
   document.head.appendChild(style);
@@ -87,27 +91,12 @@ window.addEventListener('DOMContentLoaded', () => {
         const currentDomain = window.location.hostname;
         const urlObj = new URL(url, window.location.href);
         
-        if (urlObj.hostname === currentDomain || urlObj.hostname === 'animelook.com' || urlObj.hostname.endsWith('.animelook.com')) {
+        if (urlObj.hostname === currentDomain || urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
          
           window.location.href = url;
           return null;
         } else {
-       
-          if (window.event && window.event.ctrlKey) {
-            window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
-            return null;
-          }
-          
-       
-          if (urlObj.hostname.includes('instagram.com') || 
-              urlObj.hostname.includes('twitter.com') || 
-              urlObj.hostname.includes('facebook.com') {
-            window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
-            return null;
-          }
-          
-        
-          window.location.href = url;
+          window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
           return null;
         }
       }
@@ -137,11 +126,9 @@ window.addEventListener('DOMContentLoaded', () => {
         const currentDomain = window.location.hostname;
         const urlObj = new URL(url, window.location.href);
         
-        
-        if ((urlObj.hostname !== currentDomain && 
-             urlObj.hostname !== 'animelook.com' && 
-             !urlObj.hostname.endsWith('.animelook.com')) && 
-            !e.ctrlKey && !e.metaKey) {
+        if (urlObj.hostname !== currentDomain && 
+            urlObj.hostname !== 'animelook.net' && 
+            !urlObj.hostname.endsWith('.animelook.net')) {
           e.preventDefault();
           window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
         }
@@ -164,4 +151,20 @@ window.addEventListener('DOMContentLoaded', () => {
       ipcRenderer.send('open-external-url', event.data.url);
     }
   });
+  
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+      const url = link.href;
+      try {
+        const urlObj = new URL(url, window.location.href);
+        if (urlObj.hostname !== 'animelook.net' && !urlObj.hostname.endsWith('.animelook.net')) {
+          e.preventDefault();
+          ipcRenderer.send('open-external-url', url);
+        }
+      } catch (error) {
+        console.error('URL işleme hatası:', error);
+      }
+    }
+  }, true);
 });
