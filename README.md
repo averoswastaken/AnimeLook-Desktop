@@ -1,3 +1,4 @@
+![Banner](https://raw.githubusercontent.com/averoswastaken/AnimeLook-Desktop/refs/heads/master/assets/github.png)
 # AnimeLook Masaüstü Uygulaması
 
 AnimeLook Masaüstü, anime severler için geliştirilen modern, hızlı ve hafif bir Windows uygulamasıdır. Web tarayıcısına ihtiyaç duymadan AnimeLook platformuna masaüstünüzden erişin, anime keyfinizi bölmeden sürdürebilin.
