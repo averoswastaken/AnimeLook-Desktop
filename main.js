@@ -608,6 +608,22 @@ function clearAppCache() {
         path.join(userDataPath, 'GPUCache')
       ];
       
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.session.clearCache();
+        console.log('Webview önbelleği temizlendi');
+        
+        mainWindow.webContents.executeJavaScript(`
+          const webview = document.getElementById('webview');
+          if (webview && webview.getWebContents) {
+            try {
+              webview.executeJavaScript('navigator.serviceWorker.getRegistrations().then(registrations => { registrations.forEach(registration => { registration.unregister(); }); });', true);
+              console.log('Webview içindeki service worker kayıtları temizlendi');
+            } catch (e) {
+              console.error('Service worker temizleme hatası:', e);
+            }
+          }
+        `).catch(err => console.error('Webview script hatası:', err));
+      }
 
       let deletedFiles = 0;
       let errors = 0;

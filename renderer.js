@@ -146,6 +146,21 @@ webview.addEventListener('did-finish-load', () => {
   const currentUrl = webview.getURL();
   analyzeUrlAndUpdateDiscordRPC(currentUrl);
 
+  webview.focus();
+  
+  webview.executeJavaScript(`
+    (function() {
+      const inputs = document.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
+      if (inputs.length > 0) {
+        inputs[0].focus();
+        console.log('Webview ve input alanına otomatik focus verildi');
+      } else {
+        document.body.focus();
+        console.log('Webview ve sayfaya otomatik focus verildi');
+      }
+    })();
+  `);
+
   webview.executeJavaScript(`
     document.addEventListener('fullscreenchange', () => {
 
@@ -170,7 +185,7 @@ webview.addEventListener('did-finish-load', () => {
           window.postMessage({ type: 'open-external-url', url: url }, '*');
         }
       });
-    });
+    });}
     
     document.addEventListener('click', (e) => {
       const link = e.target.closest('a');
@@ -333,6 +348,23 @@ window.electronAPI.onVideoFullscreenChange((isVideoFullscreen) => {
   }
 });
 
+window.addEventListener('focus', () => {
+  webview.focus();
+  
+  webview.executeJavaScript(`
+    (function() {
+      const inputs = document.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
+      if (inputs.length > 0) {
+        inputs[0].focus();
+        console.log('Pencere odaklandığında webview ve input alanına focus verildi');
+      } else {
+        document.body.focus();
+        console.log('Pencere odaklandığında webview ve sayfaya focus verildi');
+      }
+    })();
+  `);
+});
+
 
 backButton.addEventListener('click', () => {
   if (webview.canGoBack()) {
@@ -351,27 +383,146 @@ reloadButton.addEventListener('click', () => {
 });
 
 
+const notificationSystem = document.getElementById('notification-system');
+const notificationBox = document.getElementById('notification-box');
+const notificationTitle = document.querySelector('.notification-title');
+const notificationMessage = document.querySelector('.notification-message');
+const notificationConfirmBtn = document.getElementById('notification-confirm-btn');
+const notificationCancelBtn = document.getElementById('notification-cancel-btn');
+const notificationCloseBtn = document.getElementById('notification-close-btn');
+
+const infoIcon = document.getElementById('notification-info-icon');
+const successIcon = document.getElementById('notification-success-icon');
+const warningIcon = document.getElementById('notification-warning-icon');
+const errorIcon = document.getElementById('notification-error-icon');
+
+const NOTIFICATION_TYPES = {
+  INFO: 'info',
+  SUCCESS: 'success',
+  WARNING: 'warning',
+  ERROR: 'error'
+};
+
+function showNotification(title, message, type = NOTIFICATION_TYPES.INFO, hasCancel = false) {
+  return new Promise((resolve) => {
+    infoIcon.style.display = 'none';
+    successIcon.style.display = 'none';
+    warningIcon.style.display = 'none';
+    errorIcon.style.display = 'none';
+    
+    switch(type) {
+      case NOTIFICATION_TYPES.SUCCESS:
+        successIcon.style.display = 'block';
+        break;
+      case NOTIFICATION_TYPES.WARNING:
+        warningIcon.style.display = 'block';
+        break;
+      case NOTIFICATION_TYPES.ERROR:
+        errorIcon.style.display = 'block';
+        break;
+      default:
+        infoIcon.style.display = 'block';
+        break;
+    }
+    
+    notificationTitle.textContent = title;
+    notificationMessage.textContent = message;
+    
+    notificationCancelBtn.style.display = hasCancel ? 'block' : 'none';
+    
+    notificationSystem.classList.add('visible');
+    
+    const confirmHandler = () => {
+      notificationSystem.classList.remove('visible');
+      notificationConfirmBtn.removeEventListener('click', confirmHandler);
+      notificationCancelBtn.removeEventListener('click', cancelHandler);
+      notificationCloseBtn.removeEventListener('click', cancelHandler);
+      resolve(true);
+    };
+    
+    const cancelHandler = () => {
+      notificationSystem.classList.remove('visible');
+      notificationConfirmBtn.removeEventListener('click', confirmHandler);
+      notificationCancelBtn.removeEventListener('click', cancelHandler);
+      notificationCloseBtn.removeEventListener('click', cancelHandler);
+      resolve(false);
+    };
+    
+    notificationConfirmBtn.addEventListener('click', confirmHandler);
+    notificationCancelBtn.addEventListener('click', cancelHandler);
+    notificationCloseBtn.addEventListener('click', cancelHandler);
+  });
+}
+
+async function showAlert(message, title = 'Bilgi') {
+  return showNotification(title, message, NOTIFICATION_TYPES.INFO, false);
+}
+
+async function showConfirm(message, title = 'Onay') {
+  return showNotification(title, message, NOTIFICATION_TYPES.WARNING, true);
+}
+
+async function showSuccess(message, title = 'Başarılı') {
+  return showNotification(title, message, NOTIFICATION_TYPES.SUCCESS, false);
+}
+
+async function showError(message, title = 'Hata') {
+  return showNotification(title, message, NOTIFICATION_TYPES.ERROR, false);
+}
+
 clearCacheButton.addEventListener('click', async () => {
-  if (confirm('Önbellek temizlenecek. Bu işlem uygulamanın performansını geçici olarak etkileyebilir. Devam etmek istiyor musunuz?')) {
+  const confirmed = await showConfirm('Önbellek temizlenecek. Bu işlem uygulamanın performansını geçici olarak etkileyebilir. Devam etmek istiyor musunuz?', 'Önbellek Temizleme');
+  
+  if (confirmed) {
     try {
-      
       toggleLoadingScreen(true);
       
-      const result = await window.electronAPI.clearCache();
+      try {
+        await webview.executeJavaScript(`
+          if (window.caches) {
+            caches.keys().then(cacheNames => {
+              cacheNames.forEach(cacheName => {
+                caches.delete(cacheName);
+                console.log('Cache silindi:', cacheName);
+              });
+            });
+          }
+          
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log('Storage temizlendi');
+          } catch (e) {
+            console.error('Storage temizleme hatası:', e);
+          }
+          
+          if (navigator.serviceWorker) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+              registrations.forEach(registration => {
+                registration.unregister();
+                console.log('Service worker kaydı silindi');
+              });
+            });
+          }
+        `);
+        console.log('Webview içi önbellek temizleme işlemi başarılı');
+      } catch (webviewError) {
+        console.error('Webview önbellek temizleme hatası:', webviewError);
+      }
       
+      const result = await window.electronAPI.clearCache();
       
       toggleLoadingScreen(false);
       
       if (result.success) {
-        alert(`Önbellek başarıyla temizlendi. ${result.deletedFiles} dosya silindi.`);
-       
+        await showSuccess(`${result.deletedFiles} dosya silindi.`, 'Önbellek Başarıyla Temizlendi');
         webview.reload();
       } else {
-        alert('Önbellek temizlenirken bir hata oluştu: ' + (result.error || 'Bilinmeyen hata'));
+        await showError((result.error || 'Bilinmeyen hata'), 'Önbellek Temizleme Hatası');
       }
     } catch (error) {
       toggleLoadingScreen(false);
-      alert('Önbellek temizlenirken bir hata oluştu: ' + error.message);
+      await showError(error.message, 'Önbellek Temizleme Hatası');
       console.error('Önbellek temizleme hatası:', error);
     }
   }
@@ -433,7 +584,7 @@ pipButton.addEventListener('click', async () => {
 
     console.log('Video penceresi açıldı. Ana uygulama gizlendi. Video konumu:', videoInfo.currentTime);
   } else {
-    alert('Bu sayfada video bulunamadı!');
+    showError('Bu sayfada video bulunamadı!', 'Video Bulunamadı');
   }
 });
 
@@ -450,8 +601,7 @@ window.electronAPI.onPipModeChange((isPipActive) => {
 
 
 window.electronAPI.onPipError((errorMessage) => {
-
-  alert(errorMessage);
+  showError(errorMessage, 'PiP Modu Hatası');
 });
 
 

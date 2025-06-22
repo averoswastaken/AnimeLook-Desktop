@@ -16,7 +16,7 @@ body {
 
 
 #custom-titlebar {
-  height: 42px;
+  min-height: 42px;
   background-color: #1a1a1a;
   display: flex;
   align-items: center;
@@ -24,8 +24,9 @@ body {
   -webkit-app-region: drag;
   user-select: none;
   border-bottom: 1px solid #333;
-  padding: 0 5px;
+  padding: 5px;
   position: relative;
+  flex-wrap: wrap;
 }
 
 .titlebar-logo {
@@ -40,6 +41,25 @@ body {
   display: flex;
   margin-left: 15px;
   -webkit-app-region: no-drag;
+  flex-wrap: wrap;
+  max-width: 80%;
+  gap: 4px;
+  justify-content: flex-start;
+  align-items: center;
+  z-index: 2;
+  position: relative;
+}
+
+.button-title {
+  font-size: 12px;
+  font-weight: normal;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+
+#forward-button .button-title {
+  margin-left: 0;
+  margin-right: 4px;
 }
 
 .titlebar-actions {
@@ -56,19 +76,26 @@ body {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  z-index: 1;
+  transition: all 0.3s ease;
 }
 
 .window-controls {
   display: flex;
   margin-right: 10px;
   -webkit-app-region: no-drag;
+  z-index: 2;
+  position: relative;
 }
 
 .nav-button, .window-control-button, .action-button {
   background: transparent;
   border: none;
   color: #ccc;
-  width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
@@ -76,8 +103,12 @@ body {
   cursor: pointer;
   outline: none;
   border-radius: 4px;
-  margin: 0 2px;
+  margin: 0;
   transition: all 0.2s ease;
+  padding: 0 8px;
+  flex-direction: row;
+  white-space: nowrap;
+  min-width: 32px;
 }
 
 .nav-button:hover, .window-control-button:hover, .action-button:hover {
@@ -213,6 +244,208 @@ webview::-webkit-scrollbar-corner {
   font-size: 16px;
   color: #2196F3;
   margin-top: 10px;
+}
+
+@media screen and (max-width: 768px) {
+  .button-title {
+    display: none;
+  }
+  
+  .nav-button, .window-control-button, .action-button {
+    padding: 0 6px;
+  }
+  
+  .window-title {
+    font-size: 12px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .titlebar-buttons {
+    max-width: 70%;
+    margin-left: 5px;
+  }
+  
+  .nav-button, .window-control-button, .action-button {
+    padding: 0 4px;
+    min-width: 28px;
+  }
+  
+  .window-controls {
+    margin-right: 5px;
+  }
+  
+  .window-title {
+    max-width: 100px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .titlebar-buttons {
+    max-width: 65%;
+    margin-left: 2px;
+    gap: 2px;
+  }
+  
+  .nav-button, .window-control-button, .action-button {
+    padding: 0 3px;
+    min-width: 24px;
+  }
+  
+  .window-controls {
+    margin-right: 2px;
+  }
+  
+  .window-title {
+    max-width: 80px;
+    font-size: 11px;
+  }
+}
+
+#notification-system {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  background-color: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+#notification-system.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.notification {
+  background-color: #2e2c29;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid #444;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: notification-slide-in 0.3s ease-out;
+}
+
+@keyframes notification-slide-in {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.notification-icon {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 10px 0;
+}
+
+.notification-svg {
+  width: 48px;
+  height: 48px;
+  display: none;
+}
+
+.notification-svg.info {
+  color: #2196F3;
+}
+
+.notification-svg.success {
+  color: #4CAF50;
+}
+
+.notification-svg.warning {
+  color: #FFC107;
+}
+
+.notification-svg.error {
+  color: #F44336;
+}
+
+.notification-content {
+  padding: 10px 20px 20px;
+  text-align: center;
+}
+
+.notification-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.notification-message {
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.notification-actions {
+  display: flex;
+  justify-content: center;
+  padding: 0 20px 20px;
+  gap: 10px;
+}
+
+.notification-button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  border: none;
+  outline: none;
+}
+
+.notification-button:active {
+  transform: scale(0.98);
+}
+
+.notification-button.confirm {
+  background-color: #2196F3;
+  color: white;
+}
+
+.notification-button.confirm:hover {
+  background-color: #1976D2;
+}
+
+.notification-button.cancel {
+  background-color: #424242;
+  color: #ddd;
+}
+
+.notification-button.cancel:hover {
+  background-color: #616161;
+}
+
+.notification-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.notification-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
 
@@ -530,5 +763,94 @@ input[type="checkbox"], input[type="radio"] {
 
 #update-notes h3 {
   font-size: 14px;
+}
+
+@media screen and (max-width: 768px) {
+  .window-title {
+    font-size: 13px;
+    max-width: 120px;
+  }
+  
+  .button-title {
+    display: none;
+  }
+  
+  .nav-button, .window-control-button, .action-button {
+    padding: 0 8px;
+    min-width: 32px;
+    justify-content: center;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .window-title {
+    font-size: 12px;
+    max-width: 100px;
+  }
+  
+  .nav-button, .window-control-button, .action-button {
+    padding: 0 6px;
+    min-width: 28px;
+  }
+  
+  .titlebar-buttons {
+    gap: 2px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .window-title {
+    position: static;
+    transform: none;
+    left: auto;
+    order: -1;
+    margin: 0 auto 5px auto;
+    width: 100%;
+    justify-content: center;
+    max-width: none;
+    font-size: 12px;
+  }
+  
+  #custom-titlebar {
+    flex-direction: row;
+    align-items: center;
+    padding: 5px;
+    flex-wrap: nowrap;
+  }
+  
+  .titlebar-buttons {
+    margin-left: 0;
+    max-width: 70%;
+    justify-content: flex-start;
+    gap: 1px;
+  }
+  
+  .window-controls {
+    margin-right: 0;
+  }
+  
+  .nav-button, .window-control-button, .action-button {
+    padding: 0 4px;
+    min-width: 24px;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .window-title {
+    font-size: 11px;
+  }
+  
+  .titlebar-buttons {
+    max-width: 65%;
+  }
+  
+  .nav-button, .window-control-button, .action-button {
+    padding: 0 3px;
+    min-width: 22px;
+  }
+  
+  .window-controls {
+    margin-right: 0;
+  }
 }
 
