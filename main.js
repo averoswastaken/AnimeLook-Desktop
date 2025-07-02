@@ -4,6 +4,7 @@ const fs = require('fs');
 const Store = require('electron-store');
 const updater = require('./updater');
 const discordRPC = require('./discord-rpc');
+const packageInfo = require('./package.json');
 
 
 const store = new Store({
@@ -108,7 +109,7 @@ function createWindow() {
       return { action: 'allow' };
     }
 
-    shell.openExternal(url);
+    mainWindow.webContents.loadURL('https://animelook.net/');
     return { action: 'deny' };
   });
 
@@ -755,14 +756,29 @@ function setupIPC() {
   ipcMain.on('open-external-url', (event, url) => {
     try {
       const urlObj = new URL(url);
-      if (urlObj.protocol === 'http:' || urlObj.protocol === 'https:') {
-        console.log('Harici URL açılıyor:', url);
-        shell.openExternal(url);
+      if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
+        console.log('AnimeLook URL açılıyor:', url);
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.loadURL(url);
+        }
       } else {
-        console.warn('Güvensiz protokol:', urlObj.protocol);
+        console.log('Harici URL anasayfaya yönlendiriliyor');
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.loadURL('https://animelook.net/');
+        }
       }
     } catch (error) {
       console.error('Geçersiz URL:', url, error);
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.loadURL('https://animelook.net/');
+      }
+    }
+  });
+  
+  ipcMain.on('redirect-to-homepage', (event) => {
+    console.log('Harici link anasayfaya yönlendiriliyor');
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.loadURL('https://animelook.net/');
     }
   });
 
@@ -832,8 +848,17 @@ function setupIPC() {
   
 
   ipcMain.handle('get-app-version', () => {
-    return app.getVersion();
-  });
+  return app.getVersion();
+});
+
+ipcMain.handle('get-app-info', () => {
+  return {
+    version: app.getVersion(),
+    name: packageInfo.name,
+    description: packageInfo.description,
+    author: packageInfo.author
+  };
+});
   
   ipcMain.handle('clear-cache', async () => {
     try {

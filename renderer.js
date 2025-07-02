@@ -61,6 +61,11 @@ async function loadCurrentSettings() {
         break;
       }
     }
+    
+    const appInfo = await window.electronAPI.getAppInfo();
+    document.getElementById('version-number').textContent = appInfo.version;
+    document.getElementById('app-author').textContent = `Geliştirici: ${appInfo.author}`;
+    document.getElementById('app-description').textContent = appInfo.description;
   } catch (error) {
     console.error('Ayarlar yüklenirken hata oluştu:', error);
   }
@@ -158,6 +163,33 @@ webview.addEventListener('did-finish-load', () => {
         document.body.focus();
         console.log('Webview ve sayfaya otomatik focus verildi');
       }
+      
+      document.querySelectorAll('a').forEach(link => {
+        if (link.hasAttribute('data-processed')) return;
+        link.setAttribute('data-processed', 'true');
+        
+        link.addEventListener('click', (e) => {
+          try {
+            const url = link.href;
+            const urlObj = new URL(url, window.location.href);
+            
+            if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
+              if (link.target === '_blank') {
+                e.preventDefault();
+                window.location.href = url;
+                return false;
+              }
+            } else {
+              e.preventDefault();
+              e.stopPropagation();
+              window.postMessage({ type: 'redirect-to-homepage' }, '*');
+              return false;
+            }
+          } catch (error) {
+            console.error('URL işleme hatası:', error);
+          }
+        });
+      });
     })();
   `);
 
@@ -172,6 +204,28 @@ webview.addEventListener('did-finish-load', () => {
       window.postMessage({ type: 'video-fullscreen-change', isFullscreen: !!document.webkitFullscreenElement }, '*');
     });
     
+    const originalWindowOpen = window.open;
+    window.open = function(url, target, features) {
+      if (url) {
+        try {
+          const urlObj = new URL(url, window.location.href);
+          if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
+            if (target === '_blank') {
+              return originalWindowOpen(url, '_self', features);
+            } else {
+              window.location.href = url;
+            }
+          } else {
+            window.postMessage({ type: 'redirect-to-homepage' }, '*');
+          }
+        } catch (error) {
+          console.error('URL işleme hatası:', error);
+          window.postMessage({ type: 'redirect-to-homepage' }, '*');
+        }
+        return null;
+      }
+      return null;
+    };
 
     document.querySelectorAll('a[target="_blank"]').forEach(link => {
       link.addEventListener('click', (e) => {
@@ -182,7 +236,7 @@ webview.addEventListener('did-finish-load', () => {
         if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
           window.location.href = url;
         } else {
-          window.postMessage({ type: 'open-external-url', url: url }, '*');
+          window.postMessage({ type: 'redirect-to-homepage' }, '*');
         }
       });
     });}
@@ -195,9 +249,14 @@ webview.addEventListener('did-finish-load', () => {
         const url = link.href;
         const urlObj = new URL(url, window.location.href);
         
-        if (urlObj.hostname !== 'animelook.net' && !urlObj.hostname.endsWith('.animelook.net')) {
+        if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
+          if (link.target === '_blank') {
+            e.preventDefault();
+            window.location.href = url;
+          }
+        } else {
           e.preventDefault();
-          window.postMessage({ type: 'open-external-url', url: url }, '*');
+          window.postMessage({ type: 'redirect-to-homepage' }, '*');
         }
       }
     }, true);

@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
 
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getAppInfo: () => ipcRenderer.invoke('get-app-info'),
   
 
   clearCache: () => ipcRenderer.invoke('clear-cache'),
@@ -92,11 +93,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const urlObj = new URL(url, window.location.href);
         
         if (urlObj.hostname === currentDomain || urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
-         
-          window.location.href = url;
-          return null;
+          if (target === '_blank') {
+            return originalWindowOpen(url, '_self', features);
+          } else {
+            window.location.href = url;
+            return null;
+          }
         } else {
-          window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
+          window.parent.postMessage({ type: 'redirect-to-homepage' }, '*');
           return null;
         }
       }
@@ -114,7 +118,14 @@ window.addEventListener('DOMContentLoaded', () => {
       const link = e.target.closest('a');
       if (link && link.target === '_blank') {
         e.preventDefault();
-        window.open(link.href, '_blank');
+        const url = link.href;
+        const urlObj = new URL(url, window.location.href);
+        
+        if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
+          window.open(link.href, '_self');
+        } else {
+          window.parent.postMessage({ type: 'redirect-to-homepage' }, '*');
+        }
       }
     }, true);
     
@@ -126,11 +137,16 @@ window.addEventListener('DOMContentLoaded', () => {
         const currentDomain = window.location.hostname;
         const urlObj = new URL(url, window.location.href);
         
-        if (urlObj.hostname !== currentDomain && 
-            urlObj.hostname !== 'animelook.net' && 
-            !urlObj.hostname.endsWith('.animelook.net')) {
+        if (urlObj.hostname === currentDomain || 
+            urlObj.hostname === 'animelook.net' || 
+            urlObj.hostname.endsWith('.animelook.net')) {
+          if (link.target === '_blank') {
+            e.preventDefault();
+            window.location.href = url;
+          }
+        } else {
           e.preventDefault();
-          window.parent.postMessage({ type: 'open-external-url', url: url }, '*');
+          window.parent.postMessage({ type: 'redirect-to-homepage' }, '*');
         }
       }
     }, true);
@@ -146,25 +162,34 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
 
-    if (event.data && event.data.type === 'open-external-url') {
+    if (event.data && event.data.type === 'redirect-to-homepage') {
 
-      ipcRenderer.send('open-external-url', event.data.url);
+      ipcRenderer.send('redirect-to-homepage');
+    }
+    
+    if (event.data && event.data.type === 'open-external-url') {
+      ipcRenderer.send('redirect-to-homepage');
     }
   });
   
   document.addEventListener('click', (e) => {
-    const link = e.target.closest('a');
-    if (link && link.href) {
-      const url = link.href;
-      try {
-        const urlObj = new URL(url, window.location.href);
-        if (urlObj.hostname !== 'animelook.net' && !urlObj.hostname.endsWith('.animelook.net')) {
-          e.preventDefault();
-          ipcRenderer.send('open-external-url', url);
+      const link = e.target.closest('a');
+      if (link && link.href) {
+        const url = link.href;
+        try {
+          const urlObj = new URL(url, window.location.href);
+          if (urlObj.hostname === 'animelook.net' || urlObj.hostname.endsWith('.animelook.net')) {
+            if (link.target === '_blank') {
+              e.preventDefault();
+              window.location.href = url;
+            }
+          } else {
+            e.preventDefault();
+            ipcRenderer.send('redirect-to-homepage');
+          }
+        } catch (error) {
+          console.error('URL işleme hatası:', error);
         }
-      } catch (error) {
-        console.error('URL işleme hatası:', error);
       }
-    }
-  }, true);
+    }, true);
 });
