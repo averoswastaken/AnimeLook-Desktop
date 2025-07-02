@@ -6,11 +6,28 @@ const updater = require('./updater');
 const discordRPC = require('./discord-rpc');
 const packageInfo = require('./package.json');
 
+process.title = 'AnimeLook';
+
+app.name = 'AnimeLook';
+app.setName('AnimeLook');
+
+if (process.platform === 'win32') {
+  app.setAppUserModelId(packageInfo.build.appId);
+}
+
+app.commandLine.appendSwitch('no-sandbox');
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('high-dpi-support', 1);
+app.commandLine.appendSwitch('force-device-scale-factor', 1);
+
+app.setPath('userData', path.join(app.getPath('appData'), 'AnimeLook'));
+
 
 const store = new Store({
   name: 'settings',
   defaults: {
-    startAtBoot: false,
+    startAtBoot: true,
     runInBackground: true,
     performanceMode: 'balanced' 
   }
@@ -62,7 +79,10 @@ function createSplashWindow() {
     resizable: false,
     center: true,
     show: false,
+    title: 'AnimeLook',
     icon: path.join(__dirname, 'assets/icon.ico'),
+    autoHideMenuBar: true,
+    skipTaskbar: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -86,6 +106,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     icon: path.join(__dirname, 'assets/icon.ico'),
+    title: 'AnimeLook',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -97,10 +118,15 @@ function createWindow() {
     },
     frame: false, 
     backgroundColor: '#2e2c29',
-    show: false 
+    show: false,
+    autoHideMenuBar: true,
+    skipTaskbar: false
   });
 
   mainWindow.loadFile('index.html');
+  
+  const savedZoomLevel = store.get('zoomLevel') || 100;
+  mainWindow.webContents.setZoomFactor(savedZoomLevel / 100);
   
   
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -115,7 +141,11 @@ function createWindow() {
 
 
   mainWindow.once('ready-to-show', () => {
-    mainWindow.maximize();
+    if (app.getLoginItemSettings().wasOpenedAtLogin && store.get('startAtBoot')) {
+      mainWindow.hide();
+    } else {
+      mainWindow.maximize();
+    }
   });
 
   mainWindow.webContents.on('did-start-loading', () => {
@@ -190,7 +220,9 @@ function createPipWindow(url, videoElement, currentTime, videoId) {
     resizable: true,
     alwaysOnTop: true,
     skipTaskbar: false,
-    icon: path.join(__dirname, 'assets/icon.ico'), 
+    title: 'AnimeLook - PiP Modu',
+    icon: path.join(__dirname, 'assets/icon.ico'),
+    autoHideMenuBar: true, 
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -565,7 +597,10 @@ function createTray() {
   const contextMenu = Menu.buildFromTemplate([
     { 
       label: 'Uygulamayı Aç', 
-      click: () => { mainWindow.show(); }
+      click: () => { 
+        mainWindow.show(); 
+        mainWindow.focus(); 
+      }
     },
     { 
       label: 'Ayarlar', 
@@ -831,9 +866,14 @@ function setupIPC() {
     store.set('startAtBoot', settings.startAtBoot);
     store.set('runInBackground', settings.runInBackground);
     store.set('performanceMode', settings.performanceMode);
+    store.set('zoomLevel', settings.zoomLevel);
     
     setAutoLaunch(settings.startAtBoot);
     applyPerformanceSettings(settings.performanceMode);
+    
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.setZoomFactor(settings.zoomLevel / 100);
+    }
     
     event.reply('settings-saved', true);
   });
@@ -842,8 +882,16 @@ function setupIPC() {
     return {
       startAtBoot: store.get('startAtBoot'),
       runInBackground: store.get('runInBackground'),
-      performanceMode: store.get('performanceMode')
+      performanceMode: store.get('performanceMode'),
+      zoomLevel: store.get('zoomLevel') || 100
     };
+  });
+  
+  ipcMain.on('set-zoom-level', (event, zoomLevel) => {
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.setZoomFactor(zoomLevel / 100);
+      store.set('zoomLevel', zoomLevel);
+    }
   });
   
 
@@ -851,12 +899,27 @@ function setupIPC() {
   return app.getVersion();
 });
 
-ipcMain.handle('get-app-info', () => {
+ipcMain.handle('get-app-info', async () => {
+  let releaseNotes = "";
+  try {
+    const axios = require('axios');
+    const GITHUB_OWNER = 'averoswastaken';
+    const GITHUB_REPO = 'AnimeLook-Desktop';
+    const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+    
+    const response = await axios.get(GITHUB_API_URL);
+    const latestRelease = response.data;
+    releaseNotes = latestRelease.body || "";
+  } catch (error) {
+    console.error('GitHub API ile güncelleme notları alınamadı:', error);
+  }
+  
   return {
     version: app.getVersion(),
     name: packageInfo.name,
     description: packageInfo.description,
-    author: packageInfo.author
+    author: packageInfo.author,
+    releaseNotes: releaseNotes
   };
 });
   
@@ -891,9 +954,18 @@ ipcMain.handle('get-app-info', () => {
     if (!mainWindow) {
       createWindow();
       updater.initUpdater(mainWindow, null);
+      
+      if (app.getLoginItemSettings().wasOpenedAtLogin && store.get('startAtBoot')) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
     } else {
-      mainWindow.show();
-      mainWindow.focus();
+      if (!app.getLoginItemSettings().wasOpenedAtLogin || !store.get('startAtBoot')) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
     }
   });
 }
@@ -914,13 +986,30 @@ if (!gotTheLock) {
 
  
   app.whenReady().then(() => {
+    if (process.platform === 'win32') {
+      app.setAppUserModelId(packageInfo.build.appId);
+      
+      app.setAsDefaultProtocolClient('animelook');
+    }
+    
     setupIPC();
     createSplashWindow();
     createTray();
     discordRPC.init();
     updater.initUpdater(null, splashWindow);
-    setAutoLaunch(store.get('startAtBoot'));
+    
+    if (store.get('startAtBoot') === undefined) {
+      store.set('startAtBoot', true);
+      setAutoLaunch(true);
+    }
+    
     applyPerformanceSettings(store.get('performanceMode'));
+    
+    app.setName('AnimeLook');
+    
+    if (tray) {
+      tray.setImage(path.join(__dirname, 'assets/icon.ico'));
+    }
   });
 }
 

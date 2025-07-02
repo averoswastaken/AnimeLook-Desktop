@@ -1,6 +1,6 @@
 {
   "name": "animelook-desktop",
-  "version": "2.6.4",
+  "version": "2.6.5",
   "description": "AnimeLook için masaüstü uygulaması",
   "main": "main.js",
   "scripts": {
@@ -28,7 +28,17 @@
     "productName": "AnimeLook",
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "executableName": "AnimeLook"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AnimeLook",
+      "displayLanguageSelector": false
     },
     "publish": [
       {

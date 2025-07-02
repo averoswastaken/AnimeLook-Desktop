@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; img-src 'self' https://animelook.net data:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://animelook.net; frame-src 'self' https://animelook.net">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https://animelook.net data:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://animelook.net; frame-src 'self' https://animelook.net">
   <title>AnimeLook</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
   <div id="custom-titlebar">
@@ -148,6 +149,19 @@
             <p class="setting-description">Daha uzun pil ömrü için performansı azaltır</p>
           </div>
         </div>
+        
+        <div class="settings-group">
+          <h3>Görünüm Ayarları</h3>
+          <div class="setting-item">
+            <label for="zoom-level">Büyütme Seviyesi:</label>
+            <div class="zoom-controls">
+              <button id="zoom-out" class="zoom-button">-</button>
+              <span id="zoom-level-display">100%</span>
+              <button id="zoom-in" class="zoom-button">+</button>
+            </div>
+            <div id="app-zoom-description" class="about-info">Uygulama içeriğinin büyütme seviyesini ayarlar</div>
+          </div>
+        </div>
 
         <div class="settings-group">
           <h3>Uygulama Hakkında</h3>
@@ -155,6 +169,10 @@
             <div id="app-version" class="about-info">Sürüm: <span id="version-number">-</span></div>
             <div id="app-author" class="about-info">Geliştirici: AnimeLook</div>
             <div id="app-description" class="about-info">AnimeLook için masaüstü uygulaması</div>
+            <div class="about-info">
+              <h3>Güncelleme Notları:</h3>
+              <div id="release-notes" class="release-notes markdown-content" style="max-height: 200px; overflow-y: auto; display: none;"></div>
+            </div>
           </div>
         </div>
         
@@ -202,9 +220,7 @@
     </div>
   </div>
 
-  <!-- Özel Bildirim Sistemi -->
   <div id="notification-system">
-    <!-- Bildirim Kutusu -->
     <div id="notification-box" class="notification">
       <div class="notification-icon">
         <svg id="notification-info-icon" class="notification-svg info" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
