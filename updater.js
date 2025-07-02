@@ -73,11 +73,9 @@ function initUpdater(window, splash) {
     
     if (isStartupCheck) {
       sendStatusToSplash('Güncelleme kontrolü başarısız, uygulama başlatılıyor...', false);
-      setTimeout(() => {
-        if (splashWindow) {
-          splashWindow.webContents.send('app-ready');
-        }
-      }, 500);
+      if (splashWindow) {
+        splashWindow.webContents.send('app-ready');
+      }
       isStartupCheck = false;
     }
   });

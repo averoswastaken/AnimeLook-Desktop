@@ -133,7 +133,7 @@
       versionText.textContent = `Sürüm: ${version}`;
     }).catch(err => {
       console.error('Version bilgisi alınamadı:', err);
-      versionText.textContent = 'Sürüm: 2.6.4';
+      versionText.textContent = 'Sürüm: 2.6.5';
     });
     
  
@@ -168,7 +168,7 @@
           ipcRenderer.send('show-main-window');
         }, 500);
       }
-    }, 5000);
+    }, 15000);
   </script>
 </body>
 </html>

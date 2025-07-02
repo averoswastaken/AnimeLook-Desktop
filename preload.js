@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.send('save-settings', settings),
   onSettingsSaved: (callback) => ipcRenderer.on('settings-saved', (_, value) => callback(value)),
+  setZoomLevel: (zoomLevel) => ipcRenderer.send('set-zoom-level', zoomLevel),
   
 
   onLoadingChange: (callback) => ipcRenderer.on('loading', (_, isLoading) => callback(isLoading)),
