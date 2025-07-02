@@ -27,11 +27,6 @@ const cancelSettingsButton = document.getElementById('cancel-settings');
 const startAtBootCheckbox = document.getElementById('start-at-boot');
 const runInBackgroundCheckbox = document.getElementById('run-in-background');
 const performanceModeRadios = document.getElementsByName('performance-mode');
-const zoomInButton = document.getElementById('zoom-in');
-const zoomOutButton = document.getElementById('zoom-out');
-const zoomLevelDisplay = document.getElementById('zoom-level-display');
-
-let currentZoomLevel = 100;
 
 
 function toggleLoadingScreen(isLoading) {
@@ -58,8 +53,7 @@ async function loadCurrentSettings() {
     const settings = await window.electronAPI.getSettings();
     startAtBootCheckbox.checked = settings.startAtBoot;
     runInBackgroundCheckbox.checked = settings.runInBackground;
-    currentZoomLevel = settings.zoomLevel || 100;
-    zoomLevelDisplay.textContent = `${currentZoomLevel}%`;
+    
 
     for (const radio of performanceModeRadios) {
       if (radio.value === settings.performanceMode) {
@@ -72,29 +66,8 @@ async function loadCurrentSettings() {
     document.getElementById('version-number').textContent = appInfo.version;
     document.getElementById('app-author').textContent = `Geliştirici: ${appInfo.author}`;
     document.getElementById('app-description').textContent = appInfo.description;
-    
-    if (appInfo.releaseNotes) {
-      const releaseNotesElement = document.getElementById('release-notes');
-      if (releaseNotesElement) {
-        releaseNotesElement.innerHTML = formatReleaseNotes(appInfo.releaseNotes);
-        releaseNotesElement.style.display = 'block';
-      }
-    }
   } catch (error) {
     console.error('Ayarlar yüklenirken hata oluştu:', error);
-  }
-}
-
-function formatReleaseNotes(notes) {
-  if (!notes) return '';
-  
-  try {
-    return marked.parse(notes);
-  } catch (error) {
-    console.error('Markdown işleme hatası:', error);
-    return notes
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
   }
 }
 
@@ -112,34 +85,11 @@ function saveSettings() {
   const settings = {
     startAtBoot: startAtBootCheckbox.checked,
     runInBackground: runInBackgroundCheckbox.checked,
-    performanceMode: selectedPerformanceMode,
-    zoomLevel: currentZoomLevel
+    performanceMode: selectedPerformanceMode
   };
   
   window.electronAPI.saveSettings(settings);
   toggleSettingsModal(false);
-}
-
-// Büyütme seviyesini artır
-function increaseZoom() {
-  if (currentZoomLevel < 200) {
-    currentZoomLevel += 10;
-    updateZoomLevel();
-  }
-}
-
-// Büyütme seviyesini azalt
-function decreaseZoom() {
-  if (currentZoomLevel > 50) {
-    currentZoomLevel -= 10;
-    updateZoomLevel();
-  }
-}
-
-// Büyütme seviyesini güncelle ve uygula
-function updateZoomLevel() {
-  zoomLevelDisplay.textContent = `${currentZoomLevel}%`;
-  window.electronAPI.setZoomLevel(currentZoomLevel);
 }
 
 
@@ -919,14 +869,6 @@ saveSettingsButton.addEventListener('click', saveSettings);
 cancelSettingsButton.addEventListener('click', () => {
   toggleSettingsModal(false);
 });
-
-if (zoomInButton) {
-  zoomInButton.addEventListener('click', increaseZoom);
-}
-
-if (zoomOutButton) {
-  zoomOutButton.addEventListener('click', decreaseZoom);
-}
 
 
 settingsModal.addEventListener('click', (event) => {
