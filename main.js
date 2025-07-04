@@ -18,8 +18,21 @@ app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
 app.commandLine.appendSwitch('high-dpi-support', 1);
 app.commandLine.appendSwitch('force-device-scale-factor', 1);
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('ignore-gpu-blacklist');
+app.commandLine.appendSwitch('disable-software-rasterizer');
 
 app.setPath('userData', path.join(app.getPath('appData'), 'AnimeLook'));
+
+const cacheDir = path.join(app.getPath('userData'), 'GPUCache');
+if (!fs.existsSync(cacheDir)) {
+  try {
+    fs.mkdirSync(cacheDir, { recursive: true });
+    console.log('GPU cache dizini oluşturuldu:', cacheDir);
+  } catch (error) {
+    console.log('GPU cache dizini oluşturulamadı:', error.message);
+  }
+}
 
 
 const store = new Store({
@@ -173,23 +186,42 @@ function createWindow() {
   });
   
   function setupWebviewListeners() {
-    mainWindow.webContents.executeJavaScript(`
-      const webviewElement = document.getElementById('webview');
-      if (webviewElement) {
-        webviewElement.removeEventListener('did-navigate', updateUrlHandler);
-        webviewElement.removeEventListener('did-navigate-in-page', updateUrlHandler);
-        
-        function updateUrlHandler() {
-          const url = webviewElement.getURL();
-          window.electronAPI.updateCurrentUrl(url);
-        }
-        
-        webviewElement.addEventListener('did-navigate', updateUrlHandler);
-        webviewElement.addEventListener('did-navigate-in-page', updateUrlHandler);
-        
-        webviewElement.addEventListener('dom-ready', updateUrlHandler);
+    setTimeout(() => {
+      if (mainWindow && mainWindow.webContents && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.executeJavaScript(`
+          try {
+            const webviewElement = document.getElementById('webview');
+            if (webviewElement && typeof webviewElement.getURL === 'function') {
+              if (window.updateUrlHandler) {
+                webviewElement.removeEventListener('did-navigate', window.updateUrlHandler);
+                webviewElement.removeEventListener('did-navigate-in-page', window.updateUrlHandler);
+              }
+              
+              window.updateUrlHandler = function() {
+                try {
+                  const url = webviewElement.getURL();
+                  if (window.electronAPI && window.electronAPI.updateCurrentUrl) {
+                    window.electronAPI.updateCurrentUrl(url);
+                  }
+                } catch (error) {
+                  console.log('URL güncelleme hatası:', error.message);
+                }
+              };
+              
+              webviewElement.addEventListener('did-navigate', window.updateUrlHandler);
+              webviewElement.addEventListener('did-navigate-in-page', window.updateUrlHandler);
+              webviewElement.addEventListener('dom-ready', window.updateUrlHandler);
+            }
+          } catch (error) {
+            console.log('Webview listener kurulum hatası:', error.message);
+          }
+        `).catch(err => {
+          if (!err.message.includes('Script failed to execute')) {
+            console.error('Webview URL izleme hatası:', err);
+          }
+        });
       }
-    `).catch(err => console.error('Webview URL izleme hatası:', err));
+    }, 1000);
   }
   
   setupWebviewListeners();
@@ -969,32 +1001,46 @@ ipcMain.handle('get-app-info', async () => {
 }
 
 
-app.whenReady().then(() => {
-    if (process.platform === 'win32') {
-      app.setAppUserModelId('com.animelook.desktop');
-      
-      app.setAsDefaultProtocolClient('animelook');
-    }
-    
-    setupIPC();
-    createSplashWindow();
-    createTray();
-    discordRPC.init();
-    updater.initUpdater(null, splashWindow);
-    
-    if (store.get('startAtBoot') === undefined) {
-      store.set('startAtBoot', true);
-      setAutoLaunch(true);
-    }
-    
-    applyPerformanceSettings(store.get('performanceMode'));
-    
-    app.setName('AnimeLook');
-    
-    if (tray) {
-      tray.setImage(path.join(__dirname, 'assets/icon.ico'));
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
     }
   });
+
+  app.whenReady().then(() => {
+      if (process.platform === 'win32') {
+        app.setAppUserModelId('com.animelook.desktop');
+        
+        app.setAsDefaultProtocolClient('animelook');
+      }
+      
+      setupIPC();
+      createSplashWindow();
+      createTray();
+      discordRPC.init();
+      updater.initUpdater(null, splashWindow);
+      
+      if (store.get('startAtBoot') === undefined) {
+        store.set('startAtBoot', true);
+        setAutoLaunch(true);
+      }
+      
+      applyPerformanceSettings(store.get('performanceMode'));
+      
+      app.setName('AnimeLook');
+      
+      if (tray) {
+        tray.setImage(path.join(__dirname, 'assets/icon.ico'));
+      }
+    });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
