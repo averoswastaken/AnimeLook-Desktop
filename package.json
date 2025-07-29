@@ -1,6 +1,6 @@
 {
   "name": "animelook-desktop",
-  "version": "2.6.6",
+  "version": "2.6.9",
   "description": "AnimeLook için masaüstü uygulaması",
   "main": "main.js",
   "scripts": {

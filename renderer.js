@@ -120,7 +120,6 @@ function saveSettings() {
   toggleSettingsModal(false);
 }
 
-// Büyütme seviyesini artır
 function increaseZoom() {
   if (currentZoomLevel < 200) {
     currentZoomLevel += 10;
@@ -128,7 +127,6 @@ function increaseZoom() {
   }
 }
 
-// Büyütme seviyesini azalt
 function decreaseZoom() {
   if (currentZoomLevel > 50) {
     currentZoomLevel -= 10;
@@ -136,7 +134,6 @@ function decreaseZoom() {
   }
 }
 
-// Büyütme seviyesini güncelle ve uygula
 function updateZoomLevel() {
   zoomLevelDisplay.textContent = `${currentZoomLevel}%`;
   window.electronAPI.setZoomLevel(currentZoomLevel);
